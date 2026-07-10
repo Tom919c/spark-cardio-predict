@@ -11,6 +11,25 @@ class CardioFeatureEngineering:
         self.random_state = random_state
 
     def transform(self, dataframe):
+        model_frame = self.build_training_dataframe(dataframe)
+        split_index = int(len(model_frame) * (1 - self.test_size))
+        train_frame = model_frame.iloc[:split_index].copy()
+        test_frame = model_frame.iloc[split_index:].copy()
+
+        return {
+            "processed_shape": [
+                int(model_frame.shape[0]),
+                int(model_frame.shape[1]),
+            ],
+            "processed_columns": model_frame.columns.tolist(),
+            "processed_preview": model_frame.head(5).to_dict(orient="records"),
+            "train_shape": [int(train_frame.shape[0]), int(train_frame.shape[1])],
+            "test_shape": [int(test_frame.shape[0]), int(test_frame.shape[1])],
+            "test_size": self.test_size,
+            "random_state": self.random_state,
+        }
+
+    def build_training_dataframe(self, dataframe):
         working_frame = dataframe.copy()
         working_frame = self._clean_basic_values(working_frame)
 
@@ -34,22 +53,7 @@ class CardioFeatureEngineering:
 
         model_frame = working_frame[available_features + [self.target_column]].copy()
         model_frame = model_frame.dropna()
-        split_index = int(len(model_frame) * (1 - self.test_size))
-        train_frame = model_frame.iloc[:split_index].copy()
-        test_frame = model_frame.iloc[split_index:].copy()
-
-        return {
-            "processed_shape": [
-                int(model_frame.shape[0]),
-                int(model_frame.shape[1]),
-            ],
-            "processed_columns": model_frame.columns.tolist(),
-            "processed_preview": model_frame.head(5).to_dict(orient="records"),
-            "train_shape": [int(train_frame.shape[0]), int(train_frame.shape[1])],
-            "test_shape": [int(test_frame.shape[0]), int(test_frame.shape[1])],
-            "test_size": self.test_size,
-            "random_state": self.random_state,
-        }
+        return model_frame
 
     def _clean_basic_values(self, dataframe):
         cleaned_frame = dataframe.copy()

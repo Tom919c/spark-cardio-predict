@@ -83,3 +83,26 @@ class DataService:
             **validation_result,
             **transformed,
         }
+
+    def get_training_dataframe(self):
+        profile = self.get_dataset_profile()
+        if not profile["configured"] or not profile["exists"]:
+            raise FileNotFoundError("Dataset file is not configured or does not exist.")
+
+        dataframe = self.load_dataset()
+        validator = DatasetValidator(
+            required_columns=self.feature_columns + [self.target_column]
+        )
+        validation_result = validator.validate_columns(dataframe.columns.tolist())
+        if not validation_result["valid"]:
+            raise ValueError(
+                f"Dataset validation failed. Missing columns: {validation_result['missing_columns']}"
+            )
+
+        engineer = CardioFeatureEngineering(
+            feature_columns=self.feature_columns,
+            target_column=self.target_column,
+            test_size=self.test_size,
+            random_state=self.random_state,
+        )
+        return engineer.build_training_dataframe(dataframe)
