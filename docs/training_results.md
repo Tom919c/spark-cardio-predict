@@ -217,3 +217,174 @@
 - 最终 Accuracy：`0.74`
 - 最终 F1 Score：`0.7287`
 - 最终 ROC AUC：`0.8043`
+
+---
+
+## 自动训练记录 2026-07-10 13:21:59
+- 模型名称：`logistic_regression`
+- 训练轮数：`5`
+- 实验标签：``
+- 最优选择指标：`roc_auc`
+
+### 每轮结果
+
+#### 第 1 轮
+- run_id：`logistic_regression_round1_20260710_132146`
+- 随机种子：`42`
+- 模型路径：`data\feature\models\logistic_regression_round1_20260710_132146.joblib`
+- Accuracy：`0.7177`
+- F1 Score：`0.7022`
+- ROC AUC：`0.7784`
+
+#### 第 2 轮
+- run_id：`logistic_regression_round2_20260710_132149`
+- 随机种子：`43`
+- 模型路径：`data\feature\models\logistic_regression_round2_20260710_132149.joblib`
+- Accuracy：`0.718`
+- F1 Score：`0.7026`
+- ROC AUC：`0.7816`
+
+#### 第 3 轮
+- run_id：`logistic_regression_round3_20260710_132152`
+- 随机种子：`44`
+- 模型路径：`data\feature\models\logistic_regression_round3_20260710_132152.joblib`
+- Accuracy：`0.7202`
+- F1 Score：`0.7048`
+- ROC AUC：`0.7826`
+
+#### 第 4 轮
+- run_id：`logistic_regression_round4_20260710_132155`
+- 随机种子：`45`
+- 模型路径：`data\feature\models\logistic_regression_round4_20260710_132155.joblib`
+- Accuracy：`0.7185`
+- F1 Score：`0.7006`
+- ROC AUC：`0.7791`
+
+#### 第 5 轮
+- run_id：`logistic_regression_round5_20260710_132159`
+- 随机种子：`46`
+- 模型路径：`data\feature\models\logistic_regression_round5_20260710_132159.joblib`
+- Accuracy：`0.7169`
+- F1 Score：`0.7013`
+- ROC AUC：`0.7806`
+
+### 最终最佳结果
+- 最佳轮次：`第 3 轮`
+- 最佳模型路径：`data\feature\models\logistic_regression_round3_20260710_132152.joblib`
+- 最终 Accuracy：`0.7202`
+- 最终 F1 Score：`0.7048`
+- 最终 ROC AUC：`0.7826`
+
+---
+
+## 自动训练记录 2026-07-10 13:22:01
+- 模型名称：`logistic_regression`
+- 训练轮数：`5`
+- 实验标签：``
+- 最优选择指标：`roc_auc`
+
+### 每轮结果
+
+#### 第 1 轮
+- run_id：`logistic_regression_round1_20260710_132148`
+- 随机种子：`42`
+- 模型路径：`data\feature\models\logistic_regression_round1_20260710_132148.joblib`
+- Accuracy：`0.7177`
+- F1 Score：`0.7022`
+- ROC AUC：`0.7784`
+
+#### 第 2 轮
+- run_id：`logistic_regression_round2_20260710_132151`
+- 随机种子：`43`
+- 模型路径：`data\feature\models\logistic_regression_round2_20260710_132151.joblib`
+- Accuracy：`0.718`
+- F1 Score：`0.7026`
+- ROC AUC：`0.7816`
+
+#### 第 3 轮
+- run_id：`logistic_regression_round3_20260710_132154`
+- 随机种子：`44`
+- 模型路径：`data\feature\models\logistic_regression_round3_20260710_132154.joblib`
+- Accuracy：`0.7202`
+- F1 Score：`0.7048`
+- ROC AUC：`0.7826`
+
+#### 第 4 轮
+- run_id：`logistic_regression_round4_20260710_132157`
+- 随机种子：`45`
+- 模型路径：`data\feature\models\logistic_regression_round4_20260710_132157.joblib`
+- Accuracy：`0.7185`
+- F1 Score：`0.7006`
+- ROC AUC：`0.7791`
+
+#### 第 5 轮
+- run_id：`logistic_regression_round5_20260710_132201`
+- 随机种子：`46`
+- 模型路径：`data\feature\models\logistic_regression_round5_20260710_132201.joblib`
+- Accuracy：`0.7169`
+- F1 Score：`0.7013`
+- ROC AUC：`0.7806`
+
+### 最终最佳结果
+- 最佳轮次：`第 3 轮`
+- 最佳模型路径：`data\feature\models\logistic_regression_round3_20260710_132154.joblib`
+- 最终 Accuracy：`0.7202`
+- 最终 F1 Score：`0.7048`
+- 最终 ROC AUC：`0.7826`
+
+---
+
+## 自动训练记录 2026-07-10 13:22:10
+- 模型名称：`logistic_regression`
+- 训练轮数：`5`
+- 实验标签：``
+- 最优选择指标：`roc_auc`
+
+### 每轮结果
+
+#### 第 1 轮
+- run_id：`logistic_regression_round1_20260710_132200`
+- 随机种子：`42`
+- 模型路径：`data\feature\models\logistic_regression_round1_20260710_132200.joblib`
+- Accuracy：`0.7177`
+- F1 Score：`0.7022`
+- ROC AUC：`0.7784`
+
+#### 第 2 轮
+- run_id：`logistic_regression_round2_20260710_132203`
+- 随机种子：`43`
+- 模型路径：`data\feature\models\logistic_regression_round2_20260710_132203.joblib`
+- Accuracy：`0.718`
+- F1 Score：`0.7026`
+- ROC AUC：`0.7816`
+
+#### 第 3 轮
+- run_id：`logistic_regression_round3_20260710_132205`
+- 随机种子：`44`
+- 模型路径：`data\feature\models\logistic_regression_round3_20260710_132205.joblib`
+- Accuracy：`0.7202`
+- F1 Score：`0.7048`
+- ROC AUC：`0.7826`
+
+#### 第 4 轮
+- run_id：`logistic_regression_round4_20260710_132207`
+- 随机种子：`45`
+- 模型路径：`data\feature\models\logistic_regression_round4_20260710_132207.joblib`
+- Accuracy：`0.7185`
+- F1 Score：`0.7006`
+- ROC AUC：`0.7791`
+
+#### 第 5 轮
+- run_id：`logistic_regression_round5_20260710_132210`
+- 随机种子：`46`
+- 模型路径：`data\feature\models\logistic_regression_round5_20260710_132210.joblib`
+- Accuracy：`0.7169`
+- F1 Score：`0.7013`
+- ROC AUC：`0.7806`
+
+### 最终最佳结果
+- 最佳轮次：`第 3 轮`
+- 最佳模型路径：`data\feature\models\logistic_regression_round3_20260710_132205.joblib`
+- 最终 Accuracy：`0.7202`
+- 最终 F1 Score：`0.7048`
+- 最终 ROC AUC：`0.7826`

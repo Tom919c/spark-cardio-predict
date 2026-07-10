@@ -1000,3 +1000,420 @@
   - 医学专家规则
   - 更精细的干预模板
   - 机构级干预策略配置
+
+---
+
+## 第 10 部分：分布式 ETL 与特征工程第一阶段
+
+### 修改文件
+
+- `config/base.py`
+- `src/services/data_service.py`
+- `src/spark_jobs/etl_job.py`
+- `src/spark_jobs/feature_build_job.py`
+- `scripts/start_spark_jobs.sh`
+- `requirements.txt`
+
+### 1. `config/base.py`
+
+修改目的：
+补充分布式处理所需的模式开关、分层数据路径和 HDFS 路径占位配置。
+
+文件作用：
+继续作为全局配置中心，这一阶段负责承载单机模式和分布式模式切换所需配置。
+
+涉及配置项说明：
+
+- `DISTRIBUTED_MODE_ENABLED`
+  作用：控制是否优先使用分布式特征产物。
+  功能：切换训练数据读取来源。
+  职责：作为单机 / 分布式模式开关。
+
+- `STAGING_DATA_PATH`
+  作用：指定清洗后中间层数据路径。
+  功能：承接 ETL 输出。
+  职责：管理 staging 层数据位置。
+
+- `FEATURE_DATA_PATH`
+  作用：指定特征层数据路径。
+  功能：承接 Spark 特征工程输出。
+  职责：管理 feature 层数据位置。
+
+- `HDFS_INPUT_PATH`
+- `HDFS_STAGING_PATH`
+- `HDFS_FEATURE_PATH`
+  作用：预留 HDFS 输入输出路径。
+  功能：后续接入 HDFS 时使用。
+  职责：提供分布式路径配置占位。
+
+### 2. `src/services/data_service.py`
+
+修改目的：
+让数据服务具备“优先读取 Spark 特征产物，回退单机 CSV”的能力。
+
+文件作用：
+继续作为数据服务层，这一阶段新增了“分布式特征数据优先读取”的职责。
+
+涉及函数说明：
+
+- `__init__`
+  作用：初始化数据服务。
+  功能：新增分布式模式开关、staging 路径、feature 路径读取。
+  职责：装配分布式数据来源配置。
+
+- `get_dataset_profile`
+  作用：返回当前数据配置摘要。
+  功能：新增展示分布式模式和分层数据路径。
+  职责：负责数据来源状态说明。
+
+- `load_dataset`
+  作用：加载训练前数据。
+  功能：当分布式模式开启且 feature 文件存在时，优先读取特征层数据。
+  职责：负责训练数据来源切换。
+
+- `get_training_dataframe`
+  作用：返回训练数据表。
+  功能：分布式模式下优先直接读取特征层数据，否则回退单机特征构建流程。
+  职责：为训练模块提供统一训练数据入口。
+
+### 3. `src/spark_jobs/etl_job.py`
+
+修改目的：
+新增 Spark ETL 作业，实现原始数据的分布式清洗。
+
+文件作用：
+这是分布式 ETL 入口，负责使用 Spark 对原始心血管数据进行批量清洗。
+
+涉及函数说明：
+
+- `__init__`
+  作用：初始化 ETL 作业对象。
+  功能：接收输入路径、输出路径和分隔符参数。
+  职责：装配 ETL 作业运行参数。
+
+- `run`
+  作用：执行 ETL 主流程。
+  功能：创建 Spark 会话、读取原始数据、执行清洗并写出结果。
+  职责：负责分布式 ETL 完整闭环。
+
+- `_create_spark_session`
+  作用：创建 Spark 会话。
+  功能：提供 ETL 所需 SparkSession。
+  职责：初始化作业运行上下文。
+
+- `_read_input`
+  作用：读取原始数据。
+  功能：按 CSV 格式读入原始数据集。
+  职责：负责 ETL 输入读取。
+
+- `_clean_dataframe`
+  作用：分布式清洗数据。
+  功能：去重、过滤非正数、过滤异常血压样本。
+  职责：负责 ETL 数据质量处理。
+
+- `_write_output`
+  作用：写出清洗结果。
+  功能：将清洗后的数据写到 staging 层。
+  职责：负责 ETL 结果落盘。
+
+### 4. `src/spark_jobs/feature_build_job.py`
+
+修改目的：
+新增 Spark 特征工程作业，实现分布式特征构建。
+
+文件作用：
+这是分布式特征构建入口，负责从 staging 层生成训练特征数据。
+
+涉及函数说明：
+
+- `__init__`
+  作用：初始化特征构建作业。
+  功能：接收输入路径和输出路径。
+  职责：装配特征作业参数。
+
+- `run`
+  作用：执行特征构建主流程。
+  功能：创建 Spark 会话、读取清洗数据、生成特征并写出。
+  职责：负责分布式特征工程闭环。
+
+- `_create_spark_session`
+  作用：创建 Spark 会话。
+  功能：提供特征作业 SparkSession。
+  职责：初始化运行上下文。
+
+- `_read_input`
+  作用：读取 staging 层数据。
+  功能：把清洗后数据载入 Spark DataFrame。
+  职责：负责特征工程输入读取。
+
+- `_build_features`
+  作用：构建分布式特征。
+  功能：生成 `age_years`、`bmi` 并筛选训练列。
+  职责：负责分布式特征构造。
+
+- `_write_output`
+  作用：写出特征层数据。
+  功能：将特征结果写到 feature 层。
+  职责：负责特征工程结果落盘。
+
+### 5. `scripts/start_spark_jobs.sh`
+
+修改目的：
+提供统一的 Spark 作业启动脚本。
+
+文件作用：
+这是分布式作业启动入口，负责串联 ETL 和特征工程任务。
+
+涉及内容说明：
+
+- `SPARK_SUBMIT_BIN`
+  作用：指定 `spark-submit` 命令。
+- `RAW_INPUT_PATH`
+  作用：指定原始数据输入路径。
+- `STAGING_OUTPUT_PATH`
+  作用：指定清洗结果输出路径。
+- `FEATURE_OUTPUT_PATH`
+  作用：指定特征结果输出路径。
+
+脚本职责：
+按顺序启动 ETL 和特征构建任务。
+
+### 6. `requirements.txt`
+
+修改目的：
+补充分布式处理依赖。
+
+文件作用：
+继续作为项目依赖说明文件。
+
+新增依赖说明：
+
+- `pyspark`
+  作用：提供 Spark 分布式计算能力。
+
+### 当前阶段你需要检查什么
+
+- `src/spark_jobs/etl_job.py` 和 `feature_build_job.py` 是否具备基础实现
+- `scripts/start_spark_jobs.sh` 是否具备作业启动入口
+- `DataService` 是否具备分布式模式读取逻辑
+
+### 当前阶段还缺少哪些真实元素
+
+- 这一阶段仍缺少真实 HDFS 路径配置：
+  - `HDFS_INPUT_PATH`
+  - `HDFS_STAGING_PATH`
+  - `HDFS_FEATURE_PATH`
+- 后续还需要继续补：
+  - Hive 表结构
+  - Spark 输出与训练服务真正联通
+  - 群体分析 Spark 作业
+
+---
+
+## 第 11 部分：HDFS 数据上传脚本
+
+### 修改文件
+
+- `config/base.py`
+- `scripts/upload_to_hdfs.py`
+- `requirements.txt`
+
+### 1. `config/base.py`
+
+修改目的：
+补充 HDFS Web 连接信息和默认上传目录配置，为后续上传脚本和分布式数据流提供统一入口。
+
+文件作用：
+继续作为全局配置中心，这一阶段负责承载 HDFS 上传相关固定配置。
+
+涉及配置项说明：
+
+- `HDFS_WEB_URL`
+  作用：指定 HDFS Web 访问地址。
+  功能：供上传脚本连接 HDFS 使用。
+  职责：提供 HDFS Web 连接配置。
+
+- `HDFS_USER`
+  作用：指定上传时使用的 HDFS 用户。
+  功能：供 Python HDFS 客户端访问 HDFS 时使用。
+  职责：提供 HDFS 身份配置。
+
+- `HDFS_UPLOAD_DIR`
+  作用：指定默认上传目录。
+  功能：统一管理项目原始数据进入 HDFS 的位置。
+  职责：提供 HDFS 数据落点配置。
+
+### 2. `scripts/upload_to_hdfs.py`
+
+修改目的：
+新增适配当前项目的数据上传脚本，把本地 `cardio_train.csv` 上传到你当前 HDFS 环境。
+
+文件作用：
+这是项目的 HDFS 数据准备脚本，负责把本地原始数据送入 HDFS。
+
+涉及常量与函数说明：
+
+- `BASE_DIR`
+  作用：获取项目根目录。
+  功能：用于构造本地数据集路径。
+  职责：提供路径基准。
+
+- `LOCAL_DATASET_DIR`
+  作用：指定本地数据集目录。
+  功能：指向当前项目的 `data/raw/datasets`。
+  职责：管理本地待上传数据位置。
+
+- `DEFAULT_LOCAL_FILE`
+  作用：指定默认上传文件。
+  功能：默认上传 `cardio_train.csv`。
+  职责：作为上传脚本默认输入文件。
+
+- `HDFS_URL`
+  作用：指定 HDFS Web 地址。
+  功能：当前保留为你要求的不修改地址 `http://192.168.174.128:9870`。
+  职责：供 HDFS 客户端连接使用。
+
+- `HDFS_USER`
+  作用：指定 HDFS 用户。
+  功能：当前固定为 `zhao`。
+  职责：提供访问身份。
+
+- `HDFS_DIR`
+  作用：指定 HDFS 上传目录。
+  功能：当前固定为 `/input/data/job`。
+  职责：决定原始数据上传落点。
+
+- `upload_to_hdfs`
+  作用：执行上传主流程。
+  功能：检查本地文件、连接 HDFS、创建目录、删除旧文件、上传新文件并校验结果。
+  职责：负责 HDFS 数据上传完整闭环。
+
+- `if __name__ == "__main__": upload_to_hdfs()`
+  作用：脚本运行入口。
+  功能：允许你直接在命令行执行上传。
+  职责：触发默认上传流程。
+
+### 3. `requirements.txt`
+
+修改目的：
+补充 HDFS Python 客户端依赖。
+
+文件作用：
+继续作为项目依赖说明文件。
+
+新增依赖说明：
+
+- `hdfs`
+  作用：提供 Python 连接和操作 HDFS 的能力。
+
+### 当前阶段你需要检查什么
+
+- `scripts/upload_to_hdfs.py` 是否符合你当前项目的数据目录和 HDFS 环境
+- `HDFS_URL` 是否保持为你指定的不变地址
+- 默认上传文件是否为当前项目内的 `cardio_train.csv`
+
+### 当前阶段还缺少哪些真实元素
+
+- 这一阶段不再缺少上传脚本所需核心固定参数
+- 后续如果你要改目录结构，可能再需要调整：
+  - `HDFS_UPLOAD_DIR`
+  - 默认上传文件名
+
+### 本次补充调整
+
+修改目的：
+把 HDFS 上传落点从旧目录 `/input/data/job` 调整为你已经实际创建好的项目目录 `/input/cardio_project/raw`，避免上传到错误位置。
+
+修改文件：
+
+- `config/base.py`
+- `scripts/upload_to_hdfs.py`
+
+修改作用：
+
+- 让默认上传路径与当前 HDFS 目录结构一致
+- 让后续 Spark ETL 输入路径默认指向项目专属 raw 目录
+
+---
+
+## 第 12 部分：训练切换到 Distributed Mode
+
+### 修改文件
+
+- `config/base.py`
+- `src/services/data_service.py`
+
+### 1. `config/base.py`
+
+修改目的：
+把项目默认切换到 distributed mode，并统一 HDFS 路径为完整 `hdfs://uestc04:8020/...` 格式。
+
+文件作用：
+继续作为全局配置中心，这一阶段负责为训练模块提供真实可用的 HDFS 路径配置。
+
+涉及配置项说明：
+
+- `DISTRIBUTED_MODE_ENABLED`
+  作用：开启分布式模式。
+  功能：让训练优先从 HDFS feature 层读取数据。
+  职责：控制训练读取来源。
+
+- `HDFS_INPUT_PATH`
+- `HDFS_STAGING_PATH`
+- `HDFS_FEATURE_PATH`
+  作用：指定 raw / staging / feature 在 HDFS 上的完整路径。
+  功能：让 Spark 与训练服务都使用同一套完整 HDFS 地址。
+  职责：统一分布式数据层路径配置。
+
+### 2. `src/services/data_service.py`
+
+修改目的：
+让训练服务在 distributed mode 下通过 PySpark 直接从 HDFS 的 feature 层读取数据。
+
+文件作用：
+继续作为数据服务层，这一阶段新增了“项目内直接用 PySpark 读取 HDFS feature 层”的职责。
+
+涉及函数说明：
+
+- `__init__`
+  作用：初始化数据服务。
+  功能：新增 HDFS raw / staging / feature 路径配置读取。
+  职责：装配分布式 HDFS 数据来源配置。
+
+- `get_dataset_profile`
+  作用：返回数据配置摘要。
+  功能：新增展示 HDFS 路径信息。
+  职责：负责数据来源说明。
+
+- `load_dataset`
+  作用：加载当前数据。
+  功能：在分布式模式下优先读取 HDFS feature 层结果。
+  职责：统一数据加载入口。
+
+- `get_training_dataframe`
+  作用：返回训练数据表。
+  功能：分布式模式下直接从 HDFS feature 层加载并转成 pandas DataFrame。
+  职责：为训练模块提供分布式产出的训练数据。
+
+- `_load_distributed_feature_dataframe`
+  作用：读取分布式 feature 层数据。
+  功能：通过 PySpark 从 HDFS 读取 feature 数据并转为 pandas。
+  职责：负责 distributed mode 数据读取核心逻辑。
+
+- `_create_spark_session`
+  作用：创建 SparkSession。
+  功能：为 DataService 的分布式读取提供 Spark 上下文。
+  职责：初始化分布式读取环境。
+
+### 当前阶段你需要检查什么
+
+- `config/base.py` 是否已经切到 `DISTRIBUTED_MODE_ENABLED = True`
+- HDFS 路径是否全部为完整的 `hdfs://uestc04:8020/...`
+- 训练前读取逻辑是否已经优先走 HDFS feature 层
+
+### 当前阶段还缺少哪些真实元素
+
+- 这一阶段不再缺少关键路径参数
+- 后续如果要继续增强，建议补：
+  - DataService 的 Spark 会话配置项
+  - HDFS feature 数据结构校验
