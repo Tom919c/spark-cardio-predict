@@ -1,7 +1,12 @@
 from src.ml.predict import CardioRiskPredictor
 from src.ml.train import CardioModelTrainer
+from src.models.intervention_plan import InterventionPlan
+from src.models.risk_result import RiskResult
 from src.services.data_service import DataService
+from src.services.intervention_service import InterventionService
+from src.utils.risk_rules import build_indicator_insights, build_risk_interpretation
 from src.utils.training_recorder import TrainingResultRecorder
+from src.utils.validator import PredictionInputValidator
 
 
 class RiskService:
@@ -11,11 +16,13 @@ class RiskService:
         self.config = config
         self.data_service = DataService(config)
         self.training_recorder = TrainingResultRecorder()
+        self.intervention_service = InterventionService()
         self.default_model_name = config.get("DEFAULT_MODEL_NAME", "logistic_regression")
         self.available_model_names = config.get("AVAILABLE_MODEL_NAMES", [])
         self.enable_multi_run_training = config.get("ENABLE_MULTI_RUN_TRAINING", True)
         self.default_training_rounds = config.get("DEFAULT_TRAINING_ROUNDS", 3)
         self.best_model_metric = config.get("BEST_MODEL_METRIC", "roc_auc")
+        self.feature_columns = config.get("CARDIO_FEATURE_COLUMNS", [])
 
     def get_platform_summary(self):
         return {
@@ -54,12 +61,43 @@ class RiskService:
         return training_result
 
     def predict_risk(self, sample, model_path):
+        validator = PredictionInputValidator(required_fields=self.feature_columns)
+        validation_result = validator.validate_payload(sample)
+        if not validation_result["valid"]:
+            raise ValueError(
+                f"Prediction payload is missing fields: {validation_result['missing_fields']}"
+            )
+
         predictor = CardioRiskPredictor()
         prediction = predictor.predict(model_path, sample)
-        prediction["risk_level"] = self._map_risk_level(
-            prediction.get("predicted_probability")
+        risk_level = self._map_risk_level(prediction.get("predicted_probability"))
+        interpretation = build_risk_interpretation(
+            sample=sample,
+            predicted_probability=prediction.get("predicted_probability"),
+            risk_level=risk_level,
         )
-        return prediction
+        intervention_plan = InterventionPlan(
+            risk_level=risk_level,
+            suggestions=self.intervention_service.build_plan(sample, risk_level)[
+                "suggestions"
+            ],
+        )
+        risk_result = RiskResult(
+            predicted_label=prediction.get("predicted_label"),
+            predicted_probability=prediction.get("predicted_probability"),
+            risk_level=risk_level,
+            model_path=model_path,
+            risk_summary=interpretation.get("risk_summary", ""),
+            indicator_insights=build_indicator_insights(sample),
+            intervention_plan=intervention_plan.to_dict(),
+            key_highlights=interpretation.get("key_highlights", []),
+        )
+        result = risk_result.to_dict()
+        result["required_fields"] = self.feature_columns
+        result["risk_probability_percent"] = interpretation.get(
+            "risk_probability_percent"
+        )
+        return result
 
     def _map_risk_level(self, probability):
         if probability is None:

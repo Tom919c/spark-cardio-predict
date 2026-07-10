@@ -34,3 +34,18 @@ def train_risk_model():
     except (ValueError, FileNotFoundError) as exc:
         return error_response(message=str(exc), code=400)
     return success_response(message="多轮模型训练完成。", data=result)
+
+
+@risk_bp.route("/predict", methods=["POST"])
+def predict_single_risk():
+    service = RiskService(current_app.config)
+    payload = request.get_json(silent=True) or {}
+    model_path = payload.pop("model_path", "").strip()
+    if not model_path:
+        return error_response(message="model_path 不能为空。", code=400)
+
+    try:
+        result = service.predict_risk(sample=payload, model_path=model_path)
+    except (ValueError, FileNotFoundError) as exc:
+        return error_response(message=str(exc), code=400)
+    return success_response(message="单人风险预测完成。", data=result)
