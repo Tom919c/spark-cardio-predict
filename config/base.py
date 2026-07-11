@@ -7,14 +7,14 @@ class BaseConfig:
     APP_NAME = "Cardio Cerebrovascular Risk Platform"
     SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key")
 
-    # Local dataset configuration.
-    DATASET_FILE_PATH = "data/raw/datasets/cardio_train.csv"
-    DATASET_ENCODING = "utf-8"
+    # Local dataset configuration (points to cleaned DWD staging data).
+    DATASET_FILE_PATH = "data/staging/CVD_Standard_DWD.csv"
+    DATASET_ENCODING = "utf-8-sig"
     DATASET_SEPARATOR = ","
 
     # Distributed processing configuration.
     DISTRIBUTED_MODE_ENABLED = True
-    STAGING_DATA_PATH = "data/staging/cardio_staging.csv"
+    STAGING_DATA_PATH = "data/staging/CVD_Standard_DWD.csv"
     FEATURE_DATA_PATH = "data/feature/cardio_features.csv"
     HDFS_INPUT_PATH = "hdfs://uestc04:8020/input/cardio_project/raw/cardio_train.csv"
     HDFS_STAGING_PATH = "hdfs://uestc04:8020/input/cardio_project/staging"
@@ -52,6 +52,7 @@ class BaseConfig:
         "exercise",
     ]
     CARDIO_TARGET_COLUMN = "target_disease"
+    CARDIO_LABEL_COLUMNS = ["label_heart", "label_stroke"]
     TRAIN_TEST_SPLIT_RATIO = 0.2
     RANDOM_STATE = 42
 

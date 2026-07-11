@@ -22,7 +22,8 @@ class DataService:
         self.hdfs_staging_path = config.get("HDFS_STAGING_PATH", "")
         self.hdfs_feature_path = config.get("HDFS_FEATURE_PATH", "")
         self.feature_columns = config.get("CARDIO_FEATURE_COLUMNS", [])
-        self.target_column = config.get("CARDIO_TARGET_COLUMN", "cardio")
+        self.target_column = config.get("CARDIO_TARGET_COLUMN", "target_disease")
+        self.label_columns = config.get("CARDIO_LABEL_COLUMNS", ["label_heart", "label_stroke"])
         self.test_size = config.get("TRAIN_TEST_SPLIT_RATIO", 0.2)
         self.random_state = config.get("RANDOM_STATE", 42)
 
@@ -42,6 +43,7 @@ class DataService:
             "separator": self.dataset_separator,
             "feature_columns": self.feature_columns,
             "target_column": self.target_column,
+            "label_columns": self.label_columns,
         }
 
     def preview_dataset(self, rows=5):
@@ -78,7 +80,7 @@ class DataService:
 
         dataframe = self.load_dataset()
         validator = DatasetValidator(
-            required_columns=self.feature_columns + [self.target_column]
+            required_columns=self.feature_columns + self.label_columns
         )
         validation_result = validator.validate_columns(dataframe.columns.tolist())
         if not validation_result["valid"]:
@@ -92,6 +94,7 @@ class DataService:
             target_column=self.target_column,
             test_size=self.test_size,
             random_state=self.random_state,
+            label_columns=self.label_columns,
         )
         transformed = engineer.transform(dataframe)
         return {
@@ -110,7 +113,7 @@ class DataService:
 
         dataframe = self.load_dataset()
         validator = DatasetValidator(
-            required_columns=self.feature_columns + [self.target_column]
+            required_columns=self.feature_columns + self.label_columns
         )
         validation_result = validator.validate_columns(dataframe.columns.tolist())
         if not validation_result["valid"]:
@@ -123,6 +126,7 @@ class DataService:
             target_column=self.target_column,
             test_size=self.test_size,
             random_state=self.random_state,
+            label_columns=self.label_columns,
         )
         return engineer.build_training_dataframe(dataframe)
 
