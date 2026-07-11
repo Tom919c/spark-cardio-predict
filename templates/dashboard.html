@@ -9,7 +9,6 @@
     :root {
       --bg-1: #f4f8ff;
       --bg-2: #edf5ff;
-      --bg-3: #ffffff;
       --line: rgba(104, 147, 214, 0.14);
       --text: #0f1f3a;
       --muted: #6880a6;
@@ -21,7 +20,6 @@
     }
 
     * { box-sizing: border-box; }
-
     body {
       margin: 0;
       min-height: 100vh;
@@ -35,7 +33,6 @@
       overflow-x: hidden;
       position: relative;
     }
-
     body::before,
     body::after {
       content: "";
@@ -44,7 +41,6 @@
       pointer-events: none;
       z-index: 0;
     }
-
     body::before {
       background:
         linear-gradient(rgba(129, 170, 232, 0.06) 1px, transparent 1px),
@@ -52,12 +48,9 @@
       background-size: 44px 44px;
       mask-image: linear-gradient(to bottom, rgba(0,0,0,0.55), rgba(0,0,0,0.06));
     }
-
     body::after {
-      background:
-        radial-gradient(circle at center, transparent 0%, rgba(255,255,255,0.0) 55%, rgba(233,241,255,0.75) 100%);
+      background: radial-gradient(circle at center, transparent 0%, rgba(233,241,255,0.75) 100%);
     }
-
     .orb {
       position: fixed;
       border-radius: 50%;
@@ -67,7 +60,6 @@
       z-index: 0;
       animation: floatOrb 12s ease-in-out infinite;
     }
-
     .orb-a {
       width: 220px;
       height: 220px;
@@ -75,7 +67,6 @@
       right: 8%;
       background: rgba(102,223,255,0.24);
     }
-
     .orb-b {
       width: 280px;
       height: 280px;
@@ -84,12 +75,26 @@
       background: rgba(91,140,255,0.18);
       animation-delay: -5s;
     }
-
     @keyframes floatOrb {
       0%, 100% { transform: translateY(0) translateX(0) scale(1); }
       50% { transform: translateY(-18px) translateX(10px) scale(1.04); }
     }
-
+    @keyframes riseIn {
+      from { opacity: 0; transform: translateY(24px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes pulseDot {
+      0%, 100% { transform: scale(1); opacity: 0.8; }
+      50% { transform: scale(1.35); opacity: 1; }
+    }
+    @keyframes breathe {
+      0%, 100% { box-shadow: 0 16px 34px rgba(91,140,255,0.20); }
+      50% { box-shadow: 0 22px 44px rgba(89,215,255,0.30); }
+    }
+    @keyframes waveDrift {
+      0% { transform: translateX(-4%); }
+      100% { transform: translateX(4%); }
+    }
     .shell {
       position: relative;
       z-index: 1;
@@ -97,14 +102,12 @@
       margin: 0 auto;
       padding: 22px 18px 44px;
     }
-
     .glass {
       background: var(--card);
       border: 1px solid var(--line);
       box-shadow: var(--glow);
       backdrop-filter: blur(20px);
     }
-
     .hero {
       position: relative;
       overflow: hidden;
@@ -112,7 +115,6 @@
       padding: 26px;
       animation: riseIn 0.8s ease both;
     }
-
     .hero::before {
       content: "";
       position: absolute;
@@ -123,7 +125,6 @@
       border-radius: 50%;
       background: radial-gradient(circle, rgba(102,223,255,0.28), transparent 64%);
     }
-
     .hero::after {
       content: "";
       position: absolute;
@@ -134,12 +135,6 @@
       border-radius: 50%;
       background: radial-gradient(circle, rgba(91,140,255,0.20), transparent 70%);
     }
-
-    @keyframes riseIn {
-      from { opacity: 0; transform: translateY(24px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
     .badge {
       display: inline-flex;
       align-items: center;
@@ -148,13 +143,11 @@
       border-radius: 999px;
       font-size: 12px;
       font-weight: 700;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
+      letter-spacing: 0.08em;
       color: #2f66d6;
       background: rgba(255,255,255,0.66);
       border: 1px solid rgba(116, 164, 232, 0.18);
     }
-
     .badge::before {
       content: "";
       width: 8px;
@@ -164,12 +157,6 @@
       box-shadow: 0 0 16px rgba(91,140,255,0.45);
       animation: pulseDot 2.6s ease-in-out infinite;
     }
-
-    @keyframes pulseDot {
-      0%, 100% { transform: scale(1); opacity: 0.8; }
-      50% { transform: scale(1.35); opacity: 1; }
-    }
-
     .hero-grid {
       display: grid;
       grid-template-columns: 1.22fr 0.95fr;
@@ -179,7 +166,6 @@
       z-index: 1;
       margin-top: 20px;
     }
-
     .headline {
       margin: 18px 0 16px;
       font-size: clamp(2.6rem, 5vw, 5.2rem);
@@ -187,14 +173,12 @@
       letter-spacing: -0.06em;
       font-weight: 800;
     }
-
     .headline span {
       display: block;
       background: linear-gradient(135deg, #12284e 0%, #3568dd 38%, #4dcbe7 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
-
     .copy {
       max-width: 680px;
       color: var(--muted);
@@ -202,14 +186,12 @@
       font-size: 15px;
       margin: 0;
     }
-
     .actions {
       display: flex;
       gap: 14px;
       flex-wrap: wrap;
       margin-top: 28px;
     }
-
     .btn-primary,
     .btn-secondary {
       display: inline-flex;
@@ -220,37 +202,27 @@
       border-radius: 18px;
       text-decoration: none;
       font-weight: 800;
-      transition: transform 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+      transition: transform 0.25s ease, box-shadow 0.25s ease;
     }
-
     .btn-primary {
       color: white;
       background: linear-gradient(135deg, #4f7cff, #59d7ff);
       box-shadow: 0 16px 34px rgba(91,140,255,0.24);
       animation: breathe 3.5s ease-in-out infinite;
     }
-
     .btn-secondary {
       color: #204d9b;
       background: rgba(255,255,255,0.74);
       border: 1px solid rgba(112, 154, 217, 0.18);
     }
-
-    @keyframes breathe {
-      0%, 100% { box-shadow: 0 16px 34px rgba(91,140,255,0.20); }
-      50% { box-shadow: 0 22px 44px rgba(89,215,255,0.30); }
-    }
-
     .btn-primary:hover,
     .btn-secondary:hover {
       transform: translateY(-2px);
     }
-
     .hero-side {
       display: grid;
       gap: 14px;
     }
-
     .insight,
     .feature,
     .notice {
@@ -260,26 +232,21 @@
       padding: 20px;
       animation: riseIn 0.8s ease both;
     }
-
     .insight {
       background: var(--card-strong);
       border: 1px solid rgba(112, 155, 220, 0.16);
     }
-
     .insight strong {
       display: block;
       margin-top: 8px;
       font-size: 1.95rem;
       color: #13274b;
     }
-
     .meta {
       color: #7f97b7;
       font-size: 11px;
-      letter-spacing: 0.16em;
-      text-transform: uppercase;
+      letter-spacing: 0.12em;
     }
-
     .insight p,
     .feature p,
     .notice p,
@@ -289,7 +256,6 @@
       font-size: 14px;
       margin: 0;
     }
-
     .signal-wave {
       margin-top: 14px;
       height: 66px;
@@ -300,7 +266,6 @@
       position: relative;
       overflow: hidden;
     }
-
     .signal-wave::before {
       content: "";
       position: absolute;
@@ -312,38 +277,29 @@
       animation: waveDrift 5.6s linear infinite;
       opacity: 0.92;
     }
-
-    @keyframes waveDrift {
-      0% { transform: translateX(-4%); }
-      100% { transform: translateX(4%); }
-    }
-
     .section-tag {
       margin: 20px 0 12px;
       color: #6e89af;
       font-size: 12px;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
+      letter-spacing: 0.12em;
     }
-
-    .feature-grid {
+    .feature-grid,
+    .notice-grid {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 14px;
     }
-
+    .feature-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .notice-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .feature {
       background: var(--card);
       border: 1px solid rgba(113, 155, 219, 0.14);
     }
-
     .feature h2,
     .notice h2 {
       margin: 10px 0 10px;
       font-size: 1.18rem;
       color: #11254a;
     }
-
     .icon {
       width: 46px;
       height: 46px;
@@ -356,18 +312,10 @@
       background: linear-gradient(135deg, #5b8cff, #66dfff);
       box-shadow: 0 12px 26px rgba(91,140,255,0.16);
     }
-
-    .notice-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 14px;
-    }
-
     .notice {
       background: var(--card);
       border: 1px solid rgba(113, 155, 219, 0.14);
     }
-
     .notice ul {
       list-style: none;
       padding: 0;
@@ -375,12 +323,10 @@
       display: grid;
       gap: 12px;
     }
-
     .notice li {
       padding-left: 16px;
       position: relative;
     }
-
     .notice li::before {
       content: "";
       position: absolute;
@@ -392,35 +338,16 @@
       background: linear-gradient(135deg, var(--blue), var(--cyan));
       box-shadow: 0 0 10px rgba(91,140,255,0.28);
     }
-
     @media (max-width: 1024px) {
       .hero-grid,
       .feature-grid,
-      .notice-grid {
-        grid-template-columns: 1fr;
-      }
+      .notice-grid { grid-template-columns: 1fr; }
     }
-
     @media (max-width: 640px) {
-      .shell {
-        padding: 12px 12px 24px;
-      }
-
-      .hero {
-        padding: 18px;
-        border-radius: 26px;
-      }
-
-      .headline {
-        font-size: 2.35rem;
-      }
-
-      .insight,
-      .feature,
-      .notice {
-        border-radius: 22px;
-        padding: 16px;
-      }
+      .shell { padding: 12px 12px 24px; }
+      .hero { padding: 18px; border-radius: 26px; }
+      .headline { font-size: 2.35rem; }
+      .insight, .feature, .notice { border-radius: 22px; padding: 16px; }
     }
   </style>
 </head>
@@ -430,7 +357,7 @@
 
   <div class="shell">
     <section class="hero glass">
-      <div class="badge">AI Medical Experience</div>
+      <div class="badge">AI 医疗体验 / AI Medical Experience</div>
       <div class="hero-grid">
         <div>
           <h1 class="headline">
@@ -438,9 +365,9 @@
             <span>个人健康评估</span>
           </h1>
           <p class="copy">
-            CardioSpark 不是一个普通的风险问卷，而是一套更具未来感的 AI 医疗产品体验。
+            CardioSpark 不只是一个普通的风险问卷，而是一套更具未来感的 AI 医疗产品体验。
             它将用户输入、双模型识别、风险解释与健康建议融合成一条流畅而精致的评估路径，
-            让健康信息呈现得更美观、更直观，也更值得被认真对待。
+            让健康信息呈现得更直观、更美观，也更容易被理解和信任。
           </p>
           <div class="actions">
             <a href="{{ url_for('pages.risk_report_page') }}" class="btn-primary">开始 AI 风险评估</a>
@@ -450,40 +377,40 @@
 
         <div class="hero-side">
           <div class="insight glass" style="animation-delay:0.08s;">
-            <div class="meta">Dual Intelligence</div>
-            <strong>Heart + Stroke</strong>
+            <div class="meta">双模型智能 / Dual Intelligence</div>
+            <strong>心脏 + 卒中</strong>
             <p>同步呈现心脏风险与卒中风险，让健康判断不再停留在单一结论。</p>
           </div>
           <div class="insight glass" style="animation-delay:0.16s;">
-            <div class="meta">Visual Signal</div>
-            <strong>Live Risk Surface</strong>
+            <div class="meta">动态信号 / Visual Signal</div>
+            <strong>实时风险曲面</strong>
             <div class="signal-wave"></div>
-            <p style="margin-top:12px;">更柔和、更高级的动态可视化语汇，把结果做成像未来医疗产品一样的视觉体验。</p>
+            <p style="margin-top:12px;">用更柔和、更高级的动态可视化语汇，让结果更像未来医疗产品，而不是普通网页。</p>
           </div>
         </div>
       </div>
     </section>
 
-    <div class="section-tag" id="features">Experience Highlights</div>
+    <div class="section-tag" id="features">体验亮点 / Experience Highlights</div>
     <section class="feature-grid">
       <article class="feature glass" style="animation-delay:0.18s;">
         <div class="icon">01</div>
         <h2>输入更轻盈</h2>
-        <p>减少压迫感和生硬的技术术语，让填写过程更像一次自然、可信的数字化问诊体验。</p>
+        <p>减少生硬术语和压迫感，让填写过程更像一次自然、可信的数字健康问询。</p>
       </article>
       <article class="feature glass" style="animation-delay:0.26s;">
         <div class="icon">02</div>
         <h2>结果更优雅</h2>
-        <p>综合结论、风险摘要、概率参考与重点提醒形成层次化结果，而不是单一的“高/低风险”输出。</p>
+        <p>综合结论、风险摘要、概率参考与重点提醒形成层次化结果，而不是单一标签。</p>
       </article>
       <article class="feature glass" style="animation-delay:0.34s;">
         <div class="icon">03</div>
         <h2>建议更有温度</h2>
-        <p>把冷冰冰的模型结果翻译成用户能理解、愿意采纳的健康建议，提高展示完成度。</p>
+        <p>把冷冰冰的模型结果翻译成用户能理解、愿意采纳的健康建议。</p>
       </article>
     </section>
 
-    <div class="section-tag">Medical Notice</div>
+    <div class="section-tag">适用场景与提醒 / Use Cases & Notice</div>
     <section class="notice-grid">
       <article class="notice glass" style="animation-delay:0.4s;">
         <h2>适用场景</h2>

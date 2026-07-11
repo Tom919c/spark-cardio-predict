@@ -5,6 +5,28 @@ import pandas as pd
 class ModelExplainer:
     """Builds single-sample SHAP explanations for trained classifiers."""
 
+    FEATURE_LABELS = {
+        "age": "年龄",
+        "gender": "性别",
+        "bmi": "BMI",
+        "cholesterol": "胆固醇情况",
+        "diabetes": "糖尿病情况",
+        "hypertension": "高血压情况",
+        "smoker": "吸烟情况",
+        "alcohol": "饮酒情况",
+        "exercise": "运动情况",
+    }
+
+    FEATURE_VALUE_LABELS = {
+        "gender": {0: "女", 1: "男"},
+        "cholesterol": {1: "正常", 2: "偏高", 3: "明显升高"},
+        "diabetes": {0: "无", 1: "有"},
+        "hypertension": {0: "无", 1: "有"},
+        "smoker": {0: "从不吸烟", 1: "曾经吸烟", 2: "当前吸烟"},
+        "alcohol": {0: "不饮酒", 1: "饮酒"},
+        "exercise": {0: "不规律", 1: "规律"},
+    }
+
     def explain_prediction(self, model_path, sample, top_n=3):
         try:
             import shap
@@ -81,7 +103,12 @@ class ModelExplainer:
             contribution_pairs.append(
                 {
                     "feature": feature_name,
+                    "feature_label": self.FEATURE_LABELS.get(feature_name, feature_name),
                     "feature_value": sample_dict.get(feature_name),
+                    "feature_value_label": self._format_feature_value(
+                        feature_name,
+                        sample_dict.get(feature_name),
+                    ),
                     "contribution": round(contribution, 6),
                     "impact_percent": round(abs(contribution) / total_abs * 100, 2),
                     "direction": "increase" if contribution >= 0 else "decrease",
@@ -102,3 +129,20 @@ class ModelExplainer:
             "top_positive_factors": positive,
             "top_negative_factors": negative,
         }
+
+    def _format_feature_value(self, feature_name, feature_value):
+        value_map = self.FEATURE_VALUE_LABELS.get(feature_name)
+        if value_map is not None:
+            try:
+                normalized_value = int(feature_value)
+            except (TypeError, ValueError):
+                normalized_value = feature_value
+            return value_map.get(normalized_value, str(feature_value))
+
+        if feature_name == "bmi":
+            try:
+                return f"{float(feature_value):.1f}"
+            except (TypeError, ValueError):
+                return str(feature_value)
+
+        return str(feature_value)
