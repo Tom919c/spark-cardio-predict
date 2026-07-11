@@ -1,41 +1,32 @@
-import os
+"""Upload a local dataset to an HDFS raw directory configured through .env."""
+
+from __future__ import annotations
+
+import argparse
+from pathlib import Path
+
+from config.settings import BaseConfig
 
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-LOCAL_DATASET_DIR = os.path.join(BASE_DIR, "data", "raw", "datasets")
-DEFAULT_LOCAL_FILE = os.path.join(LOCAL_DATASET_DIR, "cardio_train.csv")
-
-HDFS_URL = "http://192.168.174.128:9870"
-HDFS_USER = "zhao"
-HDFS_DIR = "/input/cardio_project/raw"
+def parse_args():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("local_path", type=Path)
+    parser.add_argument("--hdfs-dir", default=BaseConfig.HDFS_RAW_PATH)
+    return parser.parse_args()
 
 
-def upload_to_hdfs(local_path=DEFAULT_LOCAL_FILE, hdfs_dir=HDFS_DIR):
+def upload_to_hdfs(local_path: Path, hdfs_dir: str):
     from hdfs import InsecureClient
 
-    filename = os.path.basename(local_path)
-    hdfs_file = f"{hdfs_dir.rstrip('/')}/{filename}"
-
-    if not os.path.exists(local_path):
-        raise FileNotFoundError(f"local file not found: {local_path}")
-
-    client = InsecureClient(url=HDFS_URL, user=HDFS_USER)
+    if not local_path.exists():
+        raise FileNotFoundError(f"Local file does not exist: {local_path}")
+    client = InsecureClient(url=BaseConfig.HDFS_WEB_URL, user=BaseConfig.HDFS_USER)
     client.makedirs(hdfs_dir)
-
-    if client.status(hdfs_path=hdfs_file, strict=False) is not None:
-        print("hdfs file exists, deleting old file")
-        client.delete(hdfs_file)
-    else:
-        print("hdfs file does not exist")
-
-    client.upload(hdfs_path=hdfs_file, local_path=local_path)
-
-    if client.status(hdfs_path=hdfs_file, strict=False) is None:
-        raise RuntimeError(f"hdfs upload failed: {hdfs_file}")
-
-    print(f"hdfs upload success: {hdfs_file}")
-    return hdfs_file
+    destination = f"{hdfs_dir.rstrip('/')}/{local_path.name}"
+    client.upload(destination, str(local_path), overwrite=True)
+    print(destination)
 
 
 if __name__ == "__main__":
-    upload_to_hdfs()
+    arguments = parse_args()
+    upload_to_hdfs(arguments.local_path, arguments.hdfs_dir)

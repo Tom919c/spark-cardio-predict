@@ -1,5 +1,5 @@
 class InterventionService:
-    """Builds intervention suggestions based on the combined dual-model category."""
+    """Builds practical suggestions from risk factors and a five-level assessment."""
 
     def build_plan(self, sample, risk_level):
         suggestions = []
@@ -20,12 +20,14 @@ class InterventionService:
             suggestions.append("建议控制体重，优先通过饮食调整和规律运动降低 BMI。")
 
         level_guidance = {
-            0: "建议保持现有健康管理习惯，每 6 到 12 个月复查一次关键指标。",
-            1: "建议优先关注心脏相关检查，如血压、血脂、心电图或心脏专项评估。",
-            2: "建议优先关注脑卒中相关风险管理，如血压控制、血管评估和神经系统随访。",
-            3: "建议尽快前往医疗机构做系统化检查，同时关注心脏和脑血管双重风险管理。",
+            1: "建议保持现有健康管理习惯，每 12 个月复查一次关键指标。",
+            2: "建议低盐低脂饮食，每 6 个月复查血压、血脂等指标。",
+            3: "建议建立个人健康档案，并每 3 个月完成一次随访复查。",
+            4: "建议尽快在医生指导下进行血压、血脂和心脑血管专项评估，每月复查。",
+            5: "建议 2 周内前往医疗机构进行全面临床检查并接受专业指导。",
         }
-        suggestions.append(level_guidance.get(risk_level, level_guidance[0]))
+        level_code = risk_level.get("code", 1) if isinstance(risk_level, dict) else risk_level
+        suggestions.append(level_guidance.get(level_code, level_guidance[1]))
 
         return {
             "risk_level": risk_level,

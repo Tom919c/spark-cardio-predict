@@ -22,7 +22,10 @@ def dataset_profile():
 @data_bp.route("/preview")
 def dataset_preview():
     service = DataService(current_app.config)
-    preview = service.preview_dataset()
+    try:
+        preview = service.preview_dataset()
+    except (OSError, ValueError) as exc:
+        return error_response(message=f"数据集读取失败：{exc}", code=400)
     if not preview["configured"]:
         return error_response(
             message="数据集路径未配置，请先填写 DATASET_FILE_PATH。",
@@ -41,7 +44,10 @@ def dataset_preview():
 @data_bp.route("/preprocess")
 def dataset_preprocess():
     service = DataService(current_app.config)
-    processed = service.preprocess_dataset()
+    try:
+        processed = service.preprocess_dataset()
+    except (OSError, ValueError) as exc:
+        return error_response(message=f"数据预处理失败：{exc}", code=400)
     if not processed["configured"]:
         return error_response(
             message="数据集路径未配置，请检查 DATASET_FILE_PATH。",

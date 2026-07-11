@@ -5,9 +5,9 @@ import pandas as pd
 class CardioRiskPredictor:
     """Loads trained heart and stroke models and predicts dual risk outputs."""
 
-    def predict(self, heart_model_path, stroke_model_path, sample):
-        heart_model = joblib.load(heart_model_path)
-        stroke_model = joblib.load(stroke_model_path)
+    def predict(self, model_paths, sample):
+        heart_model = joblib.load(model_paths["heart"])
+        stroke_model = joblib.load(model_paths["stroke"])
         sample_frame = self._build_sample_frame(sample)
 
         heart_label = int(heart_model.predict(sample_frame)[0])

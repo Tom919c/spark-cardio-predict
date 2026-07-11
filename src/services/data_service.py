@@ -1,7 +1,6 @@
 from pathlib import Path
 
 import pandas as pd
-from pyspark.sql import SparkSession
 
 from src.ml.feature_engineering import CardioFeatureEngineering
 from src.utils.validator import DatasetValidator
@@ -33,6 +32,7 @@ class DataService:
             "dataset_file_path": self.dataset_path,
             "exists": dataset_file.exists() if dataset_file else False,
             "distributed_mode_enabled": self.distributed_mode_enabled,
+            "data_mode": "hdfs" if self.distributed_mode_enabled else "local",
             "staging_data_path": self.staging_data_path,
             "feature_data_path": self.feature_data_path,
             "hdfs_input_path": self.hdfs_input_path,
@@ -59,9 +59,7 @@ class DataService:
         }
 
     def load_dataset(self):
-        if self.distributed_mode_enabled:
-            return self._load_distributed_feature_dataframe()
-
+        # 本地模式始终读取 DWD CSV；HDFS 模式只在获取训练特征时显式进入 Spark 分支。
         return pd.read_csv(
             self.dataset_path,
             encoding=self.dataset_encoding,
@@ -77,9 +75,7 @@ class DataService:
             }
 
         dataframe = self.load_dataset()
-        validator = DatasetValidator(
-            required_columns=self.feature_columns + [self.target_column]
-        )
+        validator = DatasetValidator(required_columns=self.feature_columns)
         validation_result = validator.validate_columns(dataframe.columns.tolist())
         if not validation_result["valid"]:
             return {
@@ -109,9 +105,7 @@ class DataService:
             raise FileNotFoundError("Dataset file is not configured or does not exist.")
 
         dataframe = self.load_dataset()
-        validator = DatasetValidator(
-            required_columns=self.feature_columns + [self.target_column]
-        )
+        validator = DatasetValidator(required_columns=self.feature_columns)
         validation_result = validator.validate_columns(dataframe.columns.tolist())
         if not validation_result["valid"]:
             raise ValueError(
@@ -127,7 +121,10 @@ class DataService:
         return engineer.build_training_dataframe(dataframe)
 
     def _load_distributed_feature_dataframe(self):
+        """Read the Spark feature result only when HDFS mode was explicitly enabled."""
         if self.hdfs_feature_path:
+            from pyspark.sql import SparkSession
+
             spark = self._create_spark_session()
             dataframe = (
                 spark.read.option("header", True)
@@ -147,4 +144,6 @@ class DataService:
         )
 
     def _create_spark_session(self):
+        from pyspark.sql import SparkSession
+
         return SparkSession.builder.appName("CardioDistributedDataService").getOrCreate()

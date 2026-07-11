@@ -1,856 +1,956 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CardioSpark AI 风险评估</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-  <style>
-    :root {
-      --bg-1: #f4f8ff;
-      --bg-2: #edf5ff;
-      --bg-3: #ffffff;
-      --line: rgba(104, 147, 214, 0.14);
-      --text: #10203d;
-      --muted: #6981a7;
-      --blue: #5b8cff;
-      --cyan: #66dfff;
-      --lime: #89f0be;
-      --amber: #ffc974;
-      --rose: #ff8aa2;
-      --glow: 0 24px 90px rgba(77, 118, 190, 0.12);
-      --card: rgba(255, 255, 255, 0.68);
-      --card-strong: rgba(255, 255, 255, 0.84);
-      --dark-card: linear-gradient(160deg, #122446 0%, #1d3561 100%);
-    }
-
-    * { box-sizing: border-box; }
-
-    body {
-      margin: 0;
-      min-height: 100vh;
-      color: var(--text);
-      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
-      background:
-        radial-gradient(circle at 12% 14%, rgba(91,140,255,0.18), transparent 22%),
-        radial-gradient(circle at 88% 10%, rgba(102,223,255,0.20), transparent 20%),
-        radial-gradient(circle at 50% 100%, rgba(189,231,255,0.35), transparent 24%),
-        linear-gradient(180deg, var(--bg-1) 0%, var(--bg-2) 42%, #f9fbff 100%);
-      overflow-x: hidden;
-      position: relative;
-    }
-
-    body::before,
-    body::after {
-      content: "";
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-      z-index: 0;
-    }
-
-    body::before {
-      background:
-        linear-gradient(rgba(129, 170, 232, 0.06) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(129, 170, 232, 0.06) 1px, transparent 1px);
-      background-size: 40px 40px;
-      mask-image: linear-gradient(to bottom, rgba(0,0,0,0.55), rgba(0,0,0,0.06));
-    }
-
-    body::after {
-      background: radial-gradient(circle at center, transparent 0%, rgba(233,241,255,0.76) 100%);
-    }
-
-    .orb {
-      position: fixed;
-      border-radius: 50%;
-      filter: blur(24px);
-      opacity: 0.55;
-      pointer-events: none;
-      z-index: 0;
-      animation: floatOrb 12s ease-in-out infinite;
-    }
-
-    .orb-a {
-      width: 240px;
-      height: 240px;
-      top: 90px;
-      right: 6%;
-      background: rgba(102,223,255,0.24);
-    }
-
-    .orb-b {
-      width: 300px;
-      height: 300px;
-      bottom: 10px;
-      left: 0;
-      background: rgba(91,140,255,0.18);
-      animation-delay: -5s;
-    }
-
-    @keyframes floatOrb {
-      0%, 100% { transform: translateY(0) translateX(0) scale(1); }
-      50% { transform: translateY(-18px) translateX(12px) scale(1.04); }
-    }
-
-    @keyframes riseIn {
-      from { opacity: 0; transform: translateY(24px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    @keyframes shimmer {
-      0% { transform: translateX(-120%); opacity: 0; }
-      20% { opacity: 1; }
-      100% { transform: translateX(160%); opacity: 0; }
-    }
-
-    .shell {
-      position: relative;
-      z-index: 1;
-      max-width: 1280px;
-      margin: 0 auto;
-      padding: 22px 18px 44px;
-    }
-
-    .glass {
-      background: var(--card);
-      border: 1px solid var(--line);
-      box-shadow: var(--glow);
-      backdrop-filter: blur(20px);
-    }
-
-    .hero {
-      position: relative;
-      overflow: hidden;
-      border-radius: 34px;
-      padding: 24px;
-      animation: riseIn 0.8s ease both;
-    }
-
-    .hero::before {
-      content: "";
-      position: absolute;
-      top: -100px;
-      right: -60px;
-      width: 340px;
-      height: 340px;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(102,223,255,0.22), transparent 64%);
-    }
-
-    .hero-top {
-      position: relative;
-      z-index: 1;
-      display: flex;
-      justify-content: space-between;
-      gap: 16px;
-      align-items: flex-end;
-    }
-
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      padding: 8px 14px;
-      border-radius: 999px;
-      font-size: 12px;
-      font-weight: 700;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-      color: #2f66d6;
-      background: rgba(255,255,255,0.66);
-      border: 1px solid rgba(116, 164, 232, 0.18);
-    }
-
-    .badge::before {
-      content: "";
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, var(--blue), var(--cyan));
-      box-shadow: 0 0 16px rgba(91,140,255,0.45);
-      animation: pulseDot 2.6s ease-in-out infinite;
-    }
-
-    @keyframes pulseDot {
-      0%, 100% { transform: scale(1); opacity: 0.8; }
-      50% { transform: scale(1.35); opacity: 1; }
-    }
-
-    .hero h1 {
-      margin: 18px 0 12px;
-      font-size: clamp(2.2rem, 4.6vw, 4rem);
-      line-height: 1;
-      font-weight: 800;
-      letter-spacing: -0.06em;
-      background: linear-gradient(135deg, #12284e 0%, #3568dd 38%, #4dcbe7 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-
-    .hero p {
-      margin: 0;
-      max-width: 760px;
-      color: var(--muted);
-      line-height: 1.9;
-      font-size: 14px;
-    }
-
-    .back-link {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 48px;
-      padding: 0 18px;
-      color: #204d9b;
-      text-decoration: none;
-      font-weight: 700;
-      border-radius: 16px;
-      border: 1px solid rgba(112, 154, 217, 0.18);
-      background: rgba(255,255,255,0.74);
-      transition: transform 0.25s ease;
-    }
-
-    .back-link:hover { transform: translateY(-2px); }
-
-    .layout {
-      display: grid;
-      grid-template-columns: 1.06fr 0.94fr;
-      gap: 16px;
-      margin-top: 16px;
-    }
-
-    .panel {
-      position: relative;
-      overflow: hidden;
-      border-radius: 30px;
-      padding: 22px;
-      animation: riseIn 0.8s ease both;
-    }
-
-    .title {
-      margin: 0;
-      font-size: 1.34rem;
-      font-weight: 800;
-      color: #12274c;
-    }
-
-    .subtitle {
-      margin: 10px 0 18px;
-      color: var(--muted);
-      line-height: 1.75;
-      font-size: 13px;
-    }
-
-    .field-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 14px;
-    }
-
-    .field-box {
-      position: relative;
-      overflow: hidden;
-      border-radius: 22px;
-      padding: 14px;
-      background: rgba(255,255,255,0.72);
-      border: 1px solid rgba(113, 155, 219, 0.14);
-      transition: transform 0.25s ease, box-shadow 0.25s ease;
-    }
-
-    .field-box:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 16px 32px rgba(105, 143, 205, 0.10);
-    }
-
-    .field-box label {
-      display: block;
-      font-size: 12px;
-      font-weight: 700;
-      color: #2a4d84;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      margin-bottom: 10px;
-    }
-
-    .field-box input,
-    .field-box select {
-      width: 100%;
-      border-radius: 16px;
-      border: 1px solid rgba(113, 155, 219, 0.18);
-      padding: 12px 14px;
-      font-size: 15px;
-      color: #10203d;
-      background: rgba(247,250,255,0.98);
-      transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
-    }
-
-    .field-box input:focus,
-    .field-box select:focus {
-      outline: none;
-      border-color: rgba(91,140,255,0.42);
-      box-shadow: 0 0 0 4px rgba(91,140,255,0.12);
-      transform: translateY(-1px);
-    }
-
-    .notice {
-      position: relative;
-      overflow: hidden;
-      margin-top: 18px;
-      border-radius: 22px;
-      padding: 16px 18px;
-      background: linear-gradient(135deg, #1f3c70, #3256a5);
-      color: #eef7ff;
-    }
-
-    .notice::after {
-      content: "";
-      position: absolute;
-      top: 0;
-      bottom: 0;
-      left: -30%;
-      width: 28%;
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.28), transparent);
-      animation: shimmer 6s linear infinite;
-    }
-
-    .notice p {
-      position: relative;
-      margin: 0;
-      line-height: 1.8;
-      font-size: 13px;
-      color: #e9f4ff;
-    }
-
-    .action-row {
-      display: flex;
-      gap: 14px;
-      align-items: center;
-      flex-wrap: wrap;
-      margin-top: 18px;
-    }
-
-    .submit-btn {
-      border: 0;
-      min-height: 54px;
-      padding: 0 24px;
-      border-radius: 18px;
-      color: white;
-      font-size: 15px;
-      font-weight: 800;
-      cursor: pointer;
-      background: linear-gradient(135deg, #4f7cff, #59d7ff);
-      box-shadow: 0 16px 34px rgba(91,140,255,0.24);
-      transition: transform 0.25s ease, box-shadow 0.25s ease, opacity 0.25s ease;
-      animation: breathe 3.5s ease-in-out infinite;
-    }
-
-    .submit-btn:hover {
-      transform: translateY(-2px);
-    }
-
-    .submit-btn:disabled {
-      opacity: 0.74;
-      cursor: wait;
-      transform: none;
-    }
-
-    @keyframes breathe {
-      0%, 100% { box-shadow: 0 16px 34px rgba(91,140,255,0.20); }
-      50% { box-shadow: 0 22px 44px rgba(89,215,255,0.28); }
-    }
-
-    .hint {
-      color: var(--muted);
-      font-size: 12px;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-    }
-
-    .result-panel {
-      background: var(--dark-card);
-      color: white;
-    }
-
-    .result-panel .title,
-    .result-panel .subtitle {
-      color: white;
-    }
-
-    .result-panel .subtitle {
-      opacity: 0.72;
-    }
-
-    .empty {
-      border-radius: 22px;
-      padding: 20px;
-      color: #b8d0f0;
-      line-height: 1.84;
-      background: rgba(255,255,255,0.06);
-      border: 1px dashed rgba(206, 225, 255, 0.16);
-    }
-
-    .result-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 14px;
-    }
-
-    .result-card,
-    .prob-card,
-    .list-card,
-    .chart-card {
-      position: relative;
-      overflow: hidden;
-      border-radius: 22px;
-      padding: 16px;
-      background: rgba(255,255,255,0.08);
-      border: 1px solid rgba(255,255,255,0.08);
-    }
-
-    .result-card::before,
-    .prob-card::before,
-    .list-card::before,
-    .chart-card::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(135deg, rgba(255,255,255,0.06), transparent 45%, transparent 72%, rgba(89,215,255,0.08));
-      pointer-events: none;
-    }
-
-    .meta {
-      color: #9cb4d6;
-      font-size: 11px;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-    }
-
-    .result-main {
-      display: block;
-      margin-top: 10px;
-      font-size: 1.42rem;
-      font-weight: 800;
-      line-height: 1.5;
-      color: white;
-    }
-
-    .pill {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      margin-top: 12px;
-      padding: 7px 12px;
-      border-radius: 999px;
-      font-size: 12px;
-      font-weight: 900;
-      letter-spacing: 0.04em;
-    }
-
-    .risk-low { background: rgba(137,240,190,0.16); color: #b7ffd7; }
-    .risk-mid { background: rgba(255,201,116,0.16); color: #ffe1a6; }
-    .risk-high { background: rgba(255,138,162,0.16); color: #ffd0db; }
-
-    .chart-card {
-      margin-top: 14px;
-      transition: transform 0.3s ease;
-    }
-
-    .chart-card:hover {
-      transform: translateY(-2px);
-    }
-
-    .stack {
-      display: grid;
-      gap: 14px;
-      margin-top: 14px;
-    }
-
-    .list-wrap {
-      display: grid;
-      gap: 10px;
-      margin-top: 12px;
-    }
-
-    .list-item {
-      border-radius: 16px;
-      padding: 12px 14px;
-      background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(255,255,255,0.06);
-      color: #e4efff;
-      line-height: 1.76;
-      font-size: 14px;
-      animation: riseIn 0.55s ease both;
-    }
-
-    .hidden {
-      display: none !important;
-    }
-
-    #resultArea {
-      animation: riseIn 0.6s ease both;
-    }
-
-    @media (max-width: 1080px) {
-      .layout {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    @media (max-width: 720px) {
-      .shell {
-        padding: 12px 12px 24px;
-      }
-
-      .hero {
-        padding: 18px;
-        border-radius: 26px;
-      }
-
-      .hero-top {
-        flex-direction: column;
-        align-items: flex-start;
-      }
-
-      .field-grid,
-      .result-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .panel {
-        border-radius: 24px;
-        padding: 18px;
-      }
-    }
-  </style>
-</head>
-<body>
-  <div class="orb orb-a"></div>
-  <div class="orb orb-b"></div>
-
-  <div class="shell">
-    <section class="hero glass">
-      <div class="hero-top">
-        <div>
-          <div class="badge">Future Medical Interface</div>
-          <h1>AI 心脑血管风险评估</h1>
-          <p>
-            将双模型识别能力、可视化结果和健康建议打包成一套更高级的医疗产品体验。
-            你看到的不只是一次表单提交，而是一场更优雅、更可信的 AI 健康评估过程。
-          </p>
-        </div>
-        <a href="{{ url_for('pages.dashboard_page') }}" class="back-link">返回首页</a>
-      </div>
-    </section>
-
-    <div class="layout">
-      <section class="panel glass" style="animation-delay:0.08s;">
-        <h2 class="title">健康信息录入</h2>
-        <div class="subtitle">请根据你的实际情况填写以下信息，系统将生成个性化的风险结果与建议。</div>
-
-        <form id="predictForm">
-          <input id="heartModelPath" type="hidden" value="{{ default_heart_model_path }}">
-          <input id="strokeModelPath" type="hidden" value="{{ default_stroke_model_path }}">
-
-          <div class="field-grid">
-            <div class="field-box">
-              <label for="age">年龄</label>
-              <input id="age" type="number" min="1" max="120" value="55" required>
-            </div>
-            <div class="field-box">
-              <label for="gender">性别</label>
-              <select id="gender">
-                <option value="0">女</option>
-                <option value="1">男</option>
-              </select>
-            </div>
-            <div class="field-box">
-              <label for="bmi">BMI</label>
-              <input id="bmi" type="number" min="10" max="60" step="0.1" value="24.5" required>
-            </div>
-            <div class="field-box">
-              <label for="cholesterol">胆固醇情况</label>
-              <select id="cholesterol">
-                <option value="1">正常</option>
-                <option value="2">偏高</option>
-                <option value="3">明显升高</option>
-              </select>
-            </div>
-            <div class="field-box">
-              <label for="hypertension">是否有高血压</label>
-              <select id="hypertension">
-                <option value="0">否</option>
-                <option value="1">是</option>
-              </select>
-            </div>
-            <div class="field-box">
-              <label for="diabetes">是否有糖尿病</label>
-              <select id="diabetes">
-                <option value="0">否</option>
-                <option value="1">是</option>
-              </select>
-            </div>
-            <div class="field-box">
-              <label for="smoker">吸烟情况</label>
-              <select id="smoker">
-                <option value="0">从不吸烟</option>
-                <option value="1">曾经吸烟</option>
-                <option value="2">当前吸烟</option>
-              </select>
-            </div>
-            <div class="field-box">
-              <label for="alcohol">是否饮酒</label>
-              <select id="alcohol">
-                <option value="0">否</option>
-                <option value="1">是</option>
-              </select>
-            </div>
-            <div class="field-box">
-              <label for="exercise">是否规律运动</label>
-              <select id="exercise">
-                <option value="1">是</option>
-                <option value="0">否</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="notice">
-            <p>
-              本评估结果仅用于健康风险参考，不能替代医院检查与医生诊断。
-              如果近期出现胸痛、呼吸困难、头晕、肢体无力等明显不适，请及时就医。
-            </p>
-          </div>
-
-          <div class="action-row">
-            <button id="submitBtn" type="submit" class="submit-btn">开始 AI 评估</button>
-            <div class="hint">Smooth / Intelligent / Personalized</div>
-          </div>
-        </form>
-      </section>
-
-      <aside class="panel result-panel" style="animation-delay:0.16s;">
-        <h2 class="title">结果展示</h2>
-        <div class="subtitle">评估完成后，系统将在这里输出综合风险判断、概率参考、重点提醒与健康建议。</div>
-
-        <div id="emptyState" class="empty">
-          结果面板正在等待输入。完成评估后，这里会切换为更丰富的动态结果视图，
-          帮助你从视觉上更容易理解自己的健康风险状态。
-        </div>
-
-        <div id="resultArea" class="hidden">
-          <div class="result-grid">
-            <div class="result-card">
-              <div class="meta">Overall Decision</div>
-              <span class="result-main" id="finalCategoryText">--</span>
-              <div class="pill risk-low" id="riskLevelBadge">--</div>
-            </div>
-            <div class="result-card">
-              <div class="meta">Risk Summary</div>
-              <span class="result-main" style="font-size:1.02rem;line-height:1.7;" id="riskSummaryText">--</span>
-            </div>
-          </div>
-
-          <div class="chart-card">
-            <div id="gaugeChart" style="height: 270px;"></div>
-          </div>
-
-          <div class="result-grid" style="margin-top:14px;">
-            <div class="prob-card">
-              <div class="meta">Heart Probability</div>
-              <span class="result-main" id="heartProbText">--</span>
-            </div>
-            <div class="prob-card">
-              <div class="meta">Stroke Probability</div>
-              <span class="result-main" id="strokeProbText">--</span>
-            </div>
-          </div>
-
-          <div class="stack">
-            <div class="list-card">
-              <div class="meta">Key Highlights</div>
-              <div id="highlightsList" class="list-wrap"></div>
-            </div>
-            <div class="list-card">
-              <div class="meta">Health Suggestions</div>
-              <div id="suggestionsList" class="list-wrap"></div>
-            </div>
-          </div>
-        </div>
-      </aside>
+ <!DOCTYPE html>
+ <html lang="zh-CN">
+ <head>
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5">
+ <title>CardioSpark 个人心脑血管风险评估</title>
+ 
+ <!-- ===== CDN 引入 ===== -->
+ <script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/page-switcher.css') }}">
+ 
+ <style>
+ /* ===== 全局基础 ===== */
+ *,*::before,*::after{box-sizing:border-box}
+ body{
+   background:linear-gradient(135deg,#F0F9FF 0%,#E0F2FE 50%,#F8FAFC 100%);
+   color:#1E293B;
+   font-family:'Inter','PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif;
+   min-height:100vh;
+   -webkit-font-smoothing:antialiased;
+ }
+ 
+ /* ===== 页面容器 ===== */
+ .page-wrap{max-width:1200px;margin:0 auto;padding:20px 16px 40px}
+ @media(min-width:768px){.page-wrap{padding:28px 24px 48px}}
+ 
+ /* ===== 卡片 ===== */
+ .card{
+   background:#fff;
+   border-radius:16px;
+   box-shadow:0 1px 3px rgba(0,0,0,0.06),0 6px 24px rgba(0,0,0,0.04);
+   padding:20px 18px;
+   margin-bottom:20px;
+   position:relative;
+ }
+ @media(min-width:768px){.card{padding:28px 32px;margin-bottom:24px}}
+ 
+ /* ===== 头部 ===== */
+ .hero{
+   text-align:center;
+   padding:32px 16px 24px;
+   background:linear-gradient(135deg,#1E40AF 0%,#3B82F6 50%,#60A5FA 100%);
+   border-radius:20px;
+   margin-bottom:24px;
+   color:#fff;
+   position:relative;
+   overflow:hidden;
+ }
+ .hero::after{
+   content:'';position:absolute;inset:0;
+   background:radial-gradient(ellipse at 80% 20%,rgba(255,255,255,0.12) 0%,transparent 60%);
+   pointer-events:none;
+ }
+ @media(min-width:768px){.hero{padding:44px 32px 36px;margin-bottom:32px}}
+ .hero h1{font-size:24px;font-weight:700;letter-spacing:0.3px;position:relative;z-index:1}
+ @media(min-width:768px){.hero h1{font-size:32px}}
+ .hero p{font-size:14px;color:rgba(255,255,255,0.85);margin-top:8px;line-height:1.6;position:relative;z-index:1}
+ @media(min-width:768px){.hero p{font-size:15px}}
+ 
+ /* ===== 表单区域 ===== */
+ .form-section-title{
+   font-size:16px;font-weight:600;color:#0F172A;
+   display:flex;align-items:center;gap:8px;
+   margin-bottom:16px;padding-bottom:10px;
+   border-bottom:2px solid #E2E8F0;
+ }
+ .form-section-title .icon{width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+ .form-section-title .icon.basic{background:#DBEAFE;color:#2563EB}
+ .form-section-title .icon.physio{background:#FCE7F3;color:#DB2777}
+ .form-section-title .icon.life{background:#D1FAE5;color:#059669}
+ 
+ .form-grid{display:grid;grid-template-columns:1fr;gap:14px}
+ @media(min-width:640px){.form-grid{grid-template-columns:1fr 1fr;gap:16px}}
+ 
+ .form-group{display:flex;flex-direction:column;gap:4px}
+ .form-label{
+   font-size:14px;font-weight:600;color:#334155;
+   display:flex;align-items:center;gap:4px;
+ }
+ .form-label .required{color:#EF4444;font-weight:700}
+ .form-hint{font-size:12px;color:#94A3B8;margin-top:1px}
+ 
+ .form-input,.form-select{
+   width:100%;padding:10px 14px;
+   border:1.5px solid #CBD5E1;border-radius:10px;
+   font-size:15px;color:#1E293B;
+   background:#F8FAFC;
+   transition:all 0.2s;outline:none;
+   font-family:inherit;
+ }
+ .form-input:focus,.form-select:focus{border-color:#3B82F6;box-shadow:0 0 0 3px rgba(59,130,246,0.15);background:#fff}
+ .form-input.error,.form-select.error{border-color:#EF4444;box-shadow:0 0 0 3px rgba(239,68,68,0.1)}
+ .form-input::placeholder{color:#94A3B8;font-size:14px}
+ 
+ /* ===== 单选/开关按钮 ===== */
+ .radio-group{display:flex;gap:8px;flex-wrap:wrap}
+ .radio-btn{
+   padding:8px 18px;border:1.5px solid #CBD5E1;border-radius:10px;
+   background:#F8FAFC;cursor:pointer;transition:all 0.2s;
+   font-size:14px;color:#475569;user-select:none;
+   display:flex;align-items:center;gap:6px;
+ }
+ .radio-btn:hover{border-color:#93C5FD;background:#EFF6FF}
+ .radio-btn.active{border-color:#3B82F6;background:#EFF6FF;color:#1D4ED8;font-weight:600}
+ .radio-btn .dot{width:16px;height:16px;border-radius:50%;border:2px solid #CBD5E1;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+ .radio-btn.active .dot{border-color:#3B82F6}
+ .radio-btn.active .dot::after{content:'';width:8px;height:8px;border-radius:50%;background:#3B82F6}
+ .radio-btn input{display:none}
+ 
+ /* 三态按钮（吸烟） */
+ .radio-btn.tristate{padding:8px 14px}
+ 
+ /* ===== 提交按钮 ===== */
+ .submit-area{text-align:center;padding:8px 0 4px}
+ .btn-submit{
+   display:inline-flex;align-items:center;gap:10px;
+   padding:14px 48px;
+   font-size:18px;font-weight:700;
+   color:#fff;
+   background:linear-gradient(135deg,#1E40AF,#3B82F6);
+   border:none;border-radius:14px;
+   cursor:pointer;transition:all 0.3s;
+   box-shadow:0 4px 14px rgba(59,130,246,0.35);
+   font-family:inherit;
+ }
+ .btn-submit:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(59,130,246,0.45)}
+ .btn-submit:active{transform:translateY(0)}
+ .btn-submit:disabled{opacity:0.6;cursor:not-allowed;transform:none}
+ .btn-submit .spinner{display:none;width:20px;height:20px;border:2.5px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite}
+ .btn-submit.loading .spinner{display:inline-block}
+ .btn-submit.loading .btn-text{opacity:0.8}
+ .btn-submit.loading{cursor:wait}
+ @keyframes spin{to{transform:rotate(360deg)}}
+ 
+ /* ===== 结果区域 ===== */
+ .result-area{margin-top:24px;display:none}
+ .result-area.visible{display:block;animation:fadeUp 0.6s ease-out}
+ @keyframes fadeUp{0%{opacity:0;transform:translateY(24px)}100%{opacity:1;transform:translateY(0)}}
+ 
+ /* ===== 风险等级卡片 ===== */
+ .risk-level-card{
+   border-radius:14px;padding:20px;text-align:center;color:#fff;
+   position:relative;overflow:hidden;height:100%;display:flex;flex-direction:column;justify-content:center;
+ }
+ .risk-level-card.level-1{background:linear-gradient(135deg,#16A34A,#22C55E)}
+ .risk-level-card.level-2{background:linear-gradient(135deg,#CA8A04,#EAB308);color:#422006}
+ .risk-level-card.level-3{background:linear-gradient(135deg,#EA580C,#F97316)}
+ .risk-level-card.level-4{background:linear-gradient(135deg,#C2410C,#EA580C)}
+ .risk-level-card.level-5{background:linear-gradient(135deg,#DC2626,#EF4444)}
+ .risk-level-card .label{font-size:13px;opacity:0.85;margin-bottom:2px}
+ .risk-level-card .value{font-size:28px;font-weight:700;line-height:1.3}
+ @media(min-width:768px){.risk-level-card .value{font-size:34px}}
+ .risk-level-card .prob{font-size:15px;opacity:0.8;margin-top:2px}
+ 
+ /* ===== 临床指导卡片 ===== */
+ .guide-card{
+   background:#F8FAFC;border:1px solid #E2E8F0;
+   border-radius:14px;padding:20px;height:100%;
+ }
+ .guide-card .title{font-size:15px;font-weight:600;color:#0F172A;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+ .guide-card .text{font-size:14px;color:#475569;line-height:1.7}
+ 
+ /* ===== 干预建议列表 ===== */
+ .suggestion-item{
+   display:flex;gap:12px;align-items:flex-start;
+   padding:14px 0;border-bottom:1px solid #F1F5F9;
+ }
+ .suggestion-item:last-child{border-bottom:none}
+ .suggestion-item .icon{
+   width:28px;height:28px;border-radius:8px;
+   display:flex;align-items:center;justify-content:center;
+   font-size:14px;flex-shrink:0;margin-top:1px;
+ }
+ .suggestion-item .icon.goal{background:#DCFCE7;color:#16A34A}
+ .suggestion-item .icon.diet{background:#FEF3C7;color:#D97706}
+ .suggestion-item .icon.med{background:#DBEAFE;color:#2563EB}
+ .suggestion-item .icon.warn{background:#FEE2E2;color:#DC2626}
+ .suggestion-item .icon.activity{background:#E0E7FF;color:#4F46E5}
+ .suggestion-item .content{flex:1}
+ .suggestion-item .content .title{font-size:14px;font-weight:600;color:#0F172A;margin-bottom:2px}
+ .suggestion-item .content .desc{font-size:13px;color:#64748B;line-height:1.6}
+ .suggestion-item .content .highlight{display:inline-block;background:#FEE2E2;color:#DC2626;padding:1px 6px;border-radius:4px;font-size:12px;font-weight:600}
+ 
+ /* ===== 仪表盘容器 ===== */
+ .gauge-wrap{width:100%;max-width:320px;margin:0 auto}
+ @media(min-width:640px){.gauge-wrap{max-width:360px}}
+ 
+ /* ===== 加载提示 ===== */
+ .loading-hint{text-align:center;padding:16px 0 4px}
+ .loading-hint .text{font-size:14px;color:#64748B}
+ .loading-hint .dots::after{content:'';animation:dots 1.5s infinite}
+ @keyframes dots{0%,20%{content:''}40%{content:'.'}60%{content:'..'}80%,100%{content:'...'}}
+ 
+ /* ===== 错误提示 ===== */
+ .validation-error{color:#EF4444;font-size:12px;margin-top:2px;display:none}
+ .validation-error.show{display:block}
+ 
+ /* ===== 结果网格布局 ===== */
+ .result-grid{display:grid;grid-template-columns:1fr;gap:16px}.result-grid>div{display:flex}
+ @media(min-width:768px){.result-grid{grid-template-columns:1fr 1fr;gap:20px}}
+ .result-grid .full-width{grid-column:1/-1}
+ 
+ /* ===== 移动端触控优化 ===== */
+ @media(max-width:480px){
+   .btn-submit{width:100%;justify-content:center;padding:16px 24px}
+   .radio-btn{flex:1;justify-content:center;padding:10px 12px}
+   .form-input,.form-select{font-size:16px;padding:12px 14px}
+ }
+ 
+ /* ===== 表头logo等 ===== */
+ .brand-badge{
+   display:inline-flex;align-items:center;gap:5px;
+   background:rgba(255,255,255,0.15);padding:4px 12px;
+   border-radius:20px;font-size:12px;color:rgba(255,255,255,0.9);
+   margin-bottom:12px;position:relative;z-index:1;
+ }
+ 
+ 
+ /* ===== 触控优化 ===== */
+ button, label, .radio-btn, .form-input, .form-select, .btn-submit, .suggestion-item {
+   touch-action: manipulation;
+ }
+ 
+ /* 小屏手机优化（<420px） */
+ @media (max-width: 420px) {
+   .page-wrap {
+     padding: 12px 10px 24px;
+   }
+   .hero {
+     padding: 24px 14px 20px;
+     border-radius: 16px;
+     margin-bottom: 16px;
+   }
+   .hero h1 {
+     font-size: 20px;
+   }
+   .hero p {
+     font-size: 13px;
+     margin-top: 6px;
+   }
+   .hero p br {
+     display: none;
+   }
+   .card {
+     padding: 16px 14px;
+     margin-bottom: 14px;
+     border-radius: 14px;
+   }
+   .form-section-title {
+     font-size: 14px;
+     margin-bottom: 12px;
+     padding-bottom: 8px;
+   }
+   .form-grid {
+     gap: 12px;
+   }
+   .form-label {
+     font-size: 13px;
+   }
+   .form-input, .form-select {
+     padding: 11px 12px;
+     font-size: 15px;
+     border-radius: 8px;
+   }
+   .radio-btn {
+     padding: 9px 12px;
+     font-size: 13px;
+     border-radius: 8px;
+   }
+   .radio-btn.tristate {
+     padding: 8px 10px;
+   }
+   .btn-submit {
+     width: 100%;
+     justify-content: center;
+     padding: 14px 24px;
+     font-size: 16px;
+     border-radius: 12px;
+   }
+   .gauge-wrap {
+     max-width: 260px;
+   }
+   #gaugeChart {
+     height: 200px !important;
+   }
+   .risk-level-card {
+     padding: 16px 12px;
+     border-radius: 12px;
+   }
+   .risk-level-card .value {
+     font-size: 24px;
+   }
+   .risk-level-card .prob {
+     font-size: 13px;
+   }
+   .guide-card {
+     padding: 16px;
+   }
+   .guide-card .text {
+     font-size: 13px;
+   }
+   .suggestion-item {
+     padding: 12px 0;
+     gap: 10px;
+   }
+   .suggestion-item .icon {
+     width: 24px;
+     height: 24px;
+     border-radius: 6px;
+   }
+   .suggestion-item .icon svg {
+     width: 14px !important;
+     height: 14px !important;
+   }
+   .suggestion-item .content .title {
+     font-size: 13px;
+   }
+   .suggestion-item .content .desc {
+     font-size: 12px;
+   }
+   .result-grid {
+     gap: 12px;
+   }
+   .brand-badge {
+     font-size: 11px;
+     padding: 3px 10px;
+   }
+ }
+ 
+ /* 极小屏手机（<360px）极端适配 */
+ @media (max-width: 360px) {
+   .page-wrap {
+     padding: 8px 8px 16px;
+   }
+   .card {
+     padding: 12px 10px;
+   }
+   .form-grid {
+     gap: 10px;
+   }
+   .radio-group {
+     gap: 5px;
+   }
+   .radio-btn {
+     padding: 8px 8px;
+     font-size: 12px;
+     gap: 4px;
+   }
+   .gauge-wrap {
+     max-width: 220px;
+   }
+   #gaugeChart {
+     height: 170px !important;
+   }
+   .hero h1 {
+     font-size: 18px;
+   }
+ }
+ 
+ /* 平板纵向（768~900px）额外优化 */
+ @media (min-width: 768px) and (max-width: 900px) {
+   .page-wrap {
+     max-width: 100%;
+     padding: 20px 18px 40px;
+   }
+   .form-grid {
+     gap: 14px;
+   }
+ }
+ 
+ /* ===== 错误弹窗样式（新增） ===== */
+ .modal-overlay {
+   position: fixed; inset: 0; z-index: 9999;
+   background: rgba(15,23,42,0.5);
+   display: flex; align-items: center; justify-content: center;
+   padding: 20px;
+   animation: fadeIn 0.25s ease-out;
+ }
+ .modal-overlay.hidden { display: none; }
+ @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+ .modal-box {
+   background: #fff; border-radius: 16px;
+   max-width: 400px; width: 100%;
+   padding: 28px 24px 20px;
+   box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+   text-align: center;
+   animation: modalSlide 0.3s ease-out;
+ }
+ @keyframes modalSlide { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+ .modal-box .modal-icon {
+   width: 56px; height: 56px; border-radius: 50%;
+   background: #FEE2E2; color: #DC2626;
+   display: flex; align-items: center; justify-content: center;
+   margin: 0 auto 12px; font-size: 28px;
+ }
+ .modal-box .modal-title { font-size: 17px; font-weight: 700; color: #1E293B; margin-bottom: 6px; }
+ .modal-box .modal-desc { font-size: 14px; color: #64748B; line-height: 1.6; margin-bottom: 18px; }
+ .modal-box .modal-btn {
+   display: inline-block; padding: 10px 32px;
+   background: #3B82F6; color: #fff; border: none;
+   border-radius: 10px; font-size: 15px; font-weight: 600;
+   cursor: pointer; font-family: inherit;
+   transition: background 0.2s;
+ }
+ .modal-box .modal-btn:hover { background: #2563EB; }
+ 
+ </style>
+ 
+ <!-- Tailwind 自定义 -->
+ <script>tailwind.config={theme:{extend:{colors:{primary:{50:'#EFF6FF',100:'#DBEAFE',500:'#3B82F6',600:'#2563EB',700:'#1D4ED8',800:'#1E40AF'}}}}}</script>
+ </head>
+ 
+  <body>
+
+  <div class="page-wrap">
+
+  <div class="app-switcher-bar" aria-label="业务端切换">
+    <div class="app-switcher-bar__brand">
+      <span class="app-switcher-bar__brand-mark">CS</span>
+      <span>CardioSpark 健康管理平台</span>
     </div>
+    <nav class="page-switcher page-switcher--light" aria-label="业务端切换">
+      <a class="page-switcher__link" href="{{ url_for('pages.dashboard_page') }}" title="进入机构端工作台">
+        <svg class="page-switcher__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        <span>机构端工作台</span>
+      </a>
+      <a class="page-switcher__link" href="{{ url_for('pages.risk_report_page') }}" aria-current="page" title="进入个人风险评估">
+        <svg class="page-switcher__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7" r="4"/><path d="M17 3.5a4 4 0 0 1 0 7"/></svg>
+        <span>个人风险评估</span>
+      </a>
+    </nav>
   </div>
 
-  <script>
-    const categoryLabelMap = {
-      0: "当前未见明显高风险",
-      1: "心脏风险偏高",
-      2: "卒中风险偏高",
-      3: "心脑血管双高风险"
-    };
-
-    const badgeClassMap = {
-      0: { cls: "pill risk-low", text: "低风险提示" },
-      1: { cls: "pill risk-mid", text: "重点关注" },
-      2: { cls: "pill risk-mid", text: "重点关注" },
-      3: { cls: "pill risk-high", text: "高风险预警" }
-    };
-
-    let gaugeChart = null;
-
-    function toNumber(value) {
-      return Number(value);
-    }
-
-    function safePercent(value) {
-      if (value === null || value === undefined) {
-        return "--";
-      }
-      return (Number(value) * 100).toFixed(2) + "%";
-    }
-
-    function listHtml(items) {
-      return (items || []).map(function(item, index) {
-        return '<div class="list-item" style="animation-delay:' + (index * 0.05) + 's;">' + item + "</div>";
-      }).join("");
-    }
-
-    function renderGauge(heartPercent, strokePercent) {
-      const target = Math.max(heartPercent || 0, strokePercent || 0);
-      const dom = document.getElementById("gaugeChart");
-      if (!gaugeChart) {
-        gaugeChart = echarts.init(dom);
-        window.addEventListener("resize", function() {
-          if (gaugeChart) gaugeChart.resize();
-        });
-      }
-
-      gaugeChart.setOption({
-        series: [{
-          type: "gauge",
-          startAngle: 220,
-          endAngle: -40,
-          center: ["50%", "58%"],
-          radius: "96%",
-          min: 0,
-          max: 100,
-          axisLine: {
-            lineStyle: {
-              width: 18,
-              color: [
-                [0.5, "#89f0be"],
-                [0.75, "#ffc974"],
-                [1, "#ff8aa2"]
-              ]
-            }
-          },
-          progress: {
-            show: true,
-            width: 18,
-            itemStyle: {
-              color: {
-                type: "linear",
-                x: 0, y: 0, x2: 1, y2: 0,
-                colorStops: [
-                  { offset: 0, color: "#66dfff" },
-                  { offset: 1, color: "#5b8cff" }
-                ]
-              }
-            }
-          },
-          pointer: { show: false },
-          anchor: { show: false },
-          axisTick: { show: false },
-          splitLine: { show: false },
-          axisLabel: { distance: -42, color: "#a5bcdb", fontSize: 12 },
-          title: {
-            show: true,
-            offsetCenter: [0, "42%"],
-            color: "#a3bad8",
-            fontSize: 13
-          },
-          detail: {
-            valueAnimation: true,
-            formatter: function(value) { return value.toFixed(1) + "%"; },
-            color: "#ffffff",
-            fontSize: 30,
-            fontWeight: "bold",
-            offsetCenter: [0, "10%"]
-          },
-          data: [{ value: target, name: "风险强度参考" }]
-        }]
-      });
-    }
-
-    function renderResult(data) {
-      document.getElementById("emptyState").classList.add("hidden");
-      document.getElementById("resultArea").classList.remove("hidden");
-
-      const category = data.final_category ?? 0;
-      document.getElementById("finalCategoryText").textContent = categoryLabelMap[category] || "风险评估完成";
-      document.getElementById("riskSummaryText").textContent = data.risk_summary || "--";
-
-      const badge = document.getElementById("riskLevelBadge");
-      badge.className = (badgeClassMap[category] || badgeClassMap[0]).cls;
-      badge.textContent = (badgeClassMap[category] || badgeClassMap[0]).text;
-
-      document.getElementById("heartProbText").textContent = data.heart_probability_percent != null
-        ? Number(data.heart_probability_percent).toFixed(2) + "%"
-        : safePercent(data.heart_predicted_probability);
-      document.getElementById("strokeProbText").textContent = data.stroke_probability_percent != null
-        ? Number(data.stroke_probability_percent).toFixed(2) + "%"
-        : safePercent(data.stroke_predicted_probability);
-
-      document.getElementById("highlightsList").innerHTML = listHtml(data.key_highlights || ["暂无额外提醒"]);
-      document.getElementById("suggestionsList").innerHTML = listHtml((data.intervention_plan || {}).suggestions || ["暂无建议"]);
-
-      renderGauge(data.heart_probability_percent, data.stroke_probability_percent);
-    }
-
-    document.getElementById("predictForm").addEventListener("submit", async function(event) {
-      event.preventDefault();
-
-      const submitBtn = document.getElementById("submitBtn");
-      submitBtn.disabled = true;
-      submitBtn.textContent = "评估中...";
-
-      const payload = {
-        heart_model_path: document.getElementById("heartModelPath").value.trim(),
-        stroke_model_path: document.getElementById("strokeModelPath").value.trim(),
-        age: toNumber(document.getElementById("age").value),
-        gender: toNumber(document.getElementById("gender").value),
-        bmi: toNumber(document.getElementById("bmi").value),
-        cholesterol: toNumber(document.getElementById("cholesterol").value),
-        diabetes: toNumber(document.getElementById("diabetes").value),
-        hypertension: toNumber(document.getElementById("hypertension").value),
-        smoker: toNumber(document.getElementById("smoker").value),
-        alcohol: toNumber(document.getElementById("alcohol").value),
-        exercise: toNumber(document.getElementById("exercise").value)
-      };
-
-      try {
-        const response = await fetch("/api/risk/predict", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Accept": "application/json"
-          },
-          body: JSON.stringify(payload)
-        });
-
-        const result = await response.json();
-        if (!response.ok || !result.success) {
-          throw new Error(result.message || ("HTTP " + response.status));
-        }
-        renderResult(result.data || {});
-      } catch (error) {
-        alert("评估失败：" + error.message);
-        console.error(error);
-      } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = "开始 AI 评估";
-      }
-    });
-  </script>
-</body>
-</html>
+  <!-- ============================================================
+      模块1：顶部头部
+      ============================================================ -->
+ <div class="hero">
+   <div class="brand-badge">
+     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+     CardioSpark
+   </div>
+   <h1>心脑血管疾病 AI 风险评估</h1>
+   <p>基于<strong>60万+</strong>多源临床数据 · <strong>中国人群</strong>本土化校准模型<br>3 分钟完成评估，获取个性化健康指导</p>
+ </div>
+ 
+ <!-- ============================================================
+      模块2：信息录入表单
+      ============================================================ -->
+ <form id="assessmentForm" novalidate>
+ 
+   <!-- 2-1：基础信息 -->
+   <div class="card">
+     <div class="form-section-title">
+       <span class="icon basic">
+         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+       </span>
+       基础信息
+     </div>
+     <div class="form-grid">
+       <!-- 年龄 -->
+       <div class="form-group">
+         <label class="form-label"><span class="required">*</span>年龄</label>
+         <input type="number" class="form-input" id="age" name="age" placeholder="请输入年龄（20~100岁）" min="20" max="100" required>
+         <div class="validation-error" id="ageError">请填写年龄（20~100岁）</div>
+       </div>
+       <!-- 性别 -->
+       <div class="form-group">
+         <label class="form-label"><span class="required">*</span>性别</label>
+         <div class="radio-group" id="genderGroup">
+           <label class="radio-btn" data-value="0">
+             <span class="dot"></span><input type="radio" name="gender" value="0">女
+           </label>
+           <label class="radio-btn" data-value="1">
+             <span class="dot"></span><input type="radio" name="gender" value="1">男
+           </label>
+         </div>
+         <div class="validation-error" id="genderError">请选择性别</div>
+       </div>
+       <!-- 身高 -->
+       <div class="form-group">
+         <label class="form-label"><span class="required">*</span>身高</label>
+         <input type="number" class="form-input" id="height" name="height" placeholder="单位：cm（140~220）" min="140" max="220" required>
+         <div class="validation-error" id="heightError">请填写身高（140~220 cm）</div>
+       </div>
+       <!-- 体重 -->
+       <div class="form-group">
+         <label class="form-label"><span class="required">*</span>体重</label>
+         <input type="number" class="form-input" id="weight" name="weight" placeholder="单位：kg（30~200）" min="30" max="200" required>
+         <div class="validation-error" id="weightError">请填写体重（30~200 kg）</div>
+       </div>
+     </div>
+   </div>
+ 
+   <!-- 2-2：生理指标 -->
+   <div class="card">
+     <div class="form-section-title">
+       <span class="icon physio">
+         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+       </span>
+       生理指标
+     </div>
+     <div class="form-grid">
+       <!-- 收缩压 -->
+       <div class="form-group">
+         <label class="form-label"><span class="required">*</span>收缩压（SBP）</label>
+         <input type="number" class="form-input" id="sbp" name="sbp" placeholder="单位：mmHg（80~240）" min="80" max="240" required>
+         <div class="form-hint">正常范围：90~140 mmHg</div>
+         <div class="validation-error" id="sbpError">请填写收缩压（80~240 mmHg）</div>
+       </div>
+       <!-- 舒张压 -->
+       <div class="form-group">
+         <label class="form-label"><span class="required">*</span>舒张压（DBP）</label>
+         <input type="number" class="form-input" id="dbp" name="dbp" placeholder="单位：mmHg（50~160）" min="50" max="160" required>
+         <div class="form-hint">正常范围：60~90 mmHg</div>
+         <div class="validation-error" id="dbpError">请填写舒张压（50~160 mmHg）</div>
+       </div>
+       <!-- 总胆固醇 -->
+       <div class="form-group">
+         <label class="form-label"><span class="required">*</span>总胆固醇（TC）</label>
+         <input type="number" class="form-input" id="cholesterol" name="cholesterol" placeholder="单位：mmol/L（2.0~10.0）" min="2" max="10" step="0.1" required>
+         <div class="form-hint">正常范围：2.8~5.7 mmol/L</div>
+         <div class="validation-error" id="cholesterolError">请填写总胆固醇（2.0~10.0 mmol/L）</div>
+       </div>
+       <!-- 空腹血糖 -->
+       <div class="form-group">
+         <label class="form-label"><span class="required">*</span>空腹血糖（GLU）</label>
+         <input type="number" class="form-input" id="glucose" name="glucose" placeholder="单位：mmol/L（2.0~20.0）" min="2" max="20" step="0.1" required>
+         <div class="form-hint">正常范围：3.9~6.1 mmol/L</div>
+         <div class="validation-error" id="glucoseError">请填写空腹血糖（2.0~20.0 mmol/L）</div>
+       </div>
+       <!-- 是否高血压 -->
+       <div class="form-group">
+         <label class="form-label">是否有高血压病史</label>
+         <div class="radio-group" id="hypertensionGroup">
+           <label class="radio-btn" data-value="0"><span class="dot"></span><input type="radio" name="hypertension" value="0">否</label>
+           <label class="radio-btn" data-value="1"><span class="dot"></span><input type="radio" name="hypertension" value="1">是</label>
+         </div>
+       </div>
+       <!-- 是否糖尿病 -->
+       <div class="form-group">
+         <label class="form-label">是否有糖尿病史</label>
+         <div class="radio-group" id="diabetesGroup">
+           <label class="radio-btn" data-value="0"><span class="dot"></span><input type="radio" name="diabetes" value="0">否</label>
+           <label class="radio-btn" data-value="1"><span class="dot"></span><input type="radio" name="diabetes" value="1">是</label>
+         </div>
+       </div>
+     </div>
+   </div>
+ 
+   <!-- 2-3：生活习惯 -->
+   <div class="card">
+     <div class="form-section-title">
+       <span class="icon life">
+         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+       </span>
+       生活习惯
+     </div>
+     <div class="form-grid">
+       <!-- 吸烟状态 -->
+       <div class="form-group">
+         <label class="form-label"><span class="required">*</span>吸烟状态</label>
+         <div class="radio-group" id="smokingGroup">
+           <label class="radio-btn tristate" data-value="0"><span class="dot"></span><input type="radio" name="smoking" value="0">从不吸烟</label>
+           <label class="radio-btn tristate" data-value="1"><span class="dot"></span><input type="radio" name="smoking" value="1">既往吸烟</label>
+           <label class="radio-btn tristate" data-value="2"><span class="dot"></span><input type="radio" name="smoking" value="2">现仍吸烟</label>
+         </div>
+         <div class="validation-error" id="smokingError">请选择吸烟状态</div>
+       </div>
+       <!-- 是否饮酒 -->
+       <div class="form-group">
+         <label class="form-label">是否饮酒</label>
+         <div class="radio-group" id="alcoholGroup">
+           <label class="radio-btn" data-value="0"><span class="dot"></span><input type="radio" name="alcohol" value="0">否</label>
+           <label class="radio-btn" data-value="1"><span class="dot"></span><input type="radio" name="alcohol" value="1">是</label>
+         </div>
+       </div>
+       <!-- 运动习惯 -->
+       <div class="form-group">
+         <label class="form-label">是否有规律运动习惯</label>
+         <div class="radio-group" id="exerciseGroup">
+           <label class="radio-btn" data-value="0"><span class="dot"></span><input type="radio" name="exercise" value="0">否</label>
+           <label class="radio-btn" data-value="1"><span class="dot"></span><input type="radio" name="exercise" value="1">是</label>
+         </div>
+       </div>
+       <!-- 家族史 -->
+       <div class="form-group">
+         <label class="form-label">心脑血管疾病家族史</label>
+         <div class="radio-group" id="familyHistoryGroup">
+           <label class="radio-btn" data-value="0"><span class="dot"></span><input type="radio" name="family_history" value="0">无</label>
+           <label class="radio-btn" data-value="1"><span class="dot"></span><input type="radio" name="family_history" value="1">有</label>
+         </div>
+       </div>
+     </div>
+   </div>
+ 
+   <!-- 提交按钮 -->
+   <div class="submit-area">
+     <button type="submit" class="btn-submit" id="submitBtn">
+       <span class="spinner"></span>
+       <span class="btn-text">开始评估</span>
+       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+     </button>
+     <div class="loading-hint" id="loadingHint" style="display:none;">
+       <span class="text">AI 模型分析中<span class="dots"></span></span>
+     </div>
+   </div>
+ 
+ </form>
+ 
+ <!-- ============================================================
+      模块3：评估结果区
+      ============================================================ -->
+ <div class="result-area" id="resultArea">
+ 
+   <!-- 3-1：结果头部 + 仪表盘 -->
+   <div class="card" style="text-align:center;">
+     <div style="font-size:13px;color:#64748B;margin-bottom:4px;">评估结果</div>
+     <div class="gauge-wrap">
+       <div id="gaugeChart" style="width:100%;height:240px;"></div>
+     </div>
+   </div>
+ 
+   <!-- 3-2：风险等级 + 临床指导 -->
+   <div class="result-grid">
+     <div>
+       <div class="risk-level-card" id="riskLevelCard">
+         <div class="label">心脑血管疾病风险等级</div>
+         <div class="value" id="riskLevelDisplay">--</div>
+         <div class="prob" id="riskProbDisplay">发病概率：--</div>
+       </div>
+     </div>
+     <div>
+       <div class="guide-card">
+         <div class="title">
+           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+           临床复查指导
+         </div>
+         <div class="text" id="guideText">--</div>
+       </div>
+     </div>
+   </div>
+ 
+   <!-- 3-3：个性化干预建议 -->
+   <div class="card">
+     <div class="form-section-title" style="border-bottom-color:#DBEAFE;">
+       <span class="icon basic" style="background:#DBEAFE;color:#2563EB;">
+         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+       </span>
+       个性化干预建议
+     </div>
+     <div id="suggestionList">
+       <div style="text-align:center;padding:16px;color:#94A3B8;font-size:14px;">完成评估后将为您生成个性化建议</div>
+     </div>
+   </div>
+ 
+   <!-- 3-4：重新评估 -->
+   <div style="text-align:center;padding:8px 0 0;">
+     <button onclick="scrollToForm()" style="background:none;border:1.5px solid #CBD5E1;border-radius:10px;padding:10px 28px;font-size:14px;color:#64748B;cursor:pointer;font-family:inherit;">重新填写信息</button>
+   </div>
+ 
+ </div>
+ 
+ </div><!-- /.page-wrap -->
+ 
+ <!-- ===== 错误弹窗（新增） ===== -->
+ <div class="modal-overlay hidden" id="errorModalOverlay">
+   <div class="modal-box">
+     <div class="modal-icon">!</div>
+     <div class="modal-title">评估请求失败</div>
+     <div class="modal-desc" id="errorModalDesc">网络异常，请检查后端服务是否启动后重试。</div>
+     <button class="modal-btn" onclick="closeErrorModal()">我知道了</button>
+   </div>
+ </div>
+ 
+ <!-- ============================================================
+      JavaScript 主逻辑
+      ============================================================ -->
+ <script>
+ /* ===========================================================================
+  *  模块0：全局配置
+  * =========================================================================== */
+ const API_BASE = '';
+ 
+ /* ===========================================================================
+  *  模块B：表单交互
+  * =========================================================================== */
+ 
+ document.querySelectorAll('.radio-group').forEach(group => {
+   group.addEventListener('click', function(e) {
+     const btn = e.target.closest('.radio-btn');
+     if (!btn) return;
+     this.querySelectorAll('.radio-btn').forEach(b => b.classList.remove('active'));
+     btn.classList.add('active');
+     btn.querySelector('input').checked = true;
+   });
+ });
+ 
+ function validateForm() {
+   let valid = true;
+   const fields = [
+     { id: 'age', errorId: 'ageError', test: v => parseInt(v) >= 20 && parseInt(v) <= 100 },
+     { id: 'height', errorId: 'heightError', test: v => parseInt(v) >= 140 && parseInt(v) <= 220 },
+     { id: 'weight', errorId: 'weightError', test: v => parseInt(v) >= 30 && parseInt(v) <= 200 },
+     { id: 'sbp', errorId: 'sbpError', test: v => parseInt(v) >= 80 && parseInt(v) <= 240 },
+     { id: 'dbp', errorId: 'dbpError', test: v => parseInt(v) >= 50 && parseInt(v) <= 160 },
+     { id: 'cholesterol', errorId: 'cholesterolError', test: v => parseFloat(v) >= 2 && parseFloat(v) <= 10 },
+     { id: 'glucose', errorId: 'glucoseError', test: v => parseFloat(v) >= 2 && parseFloat(v) <= 20 }
+   ];
+   fields.forEach(f => {
+     const el = document.getElementById(f.id);
+     const errEl = document.getElementById(f.errorId);
+     if (!el.value || !f.test(el.value)) {
+       el.classList.add('error');
+       errEl.classList.add('show');
+       valid = false;
+     } else {
+       el.classList.remove('error');
+       errEl.classList.remove('show');
+     }
+   });
+   if (!document.querySelector('input[name="gender"]:checked')) {
+     document.getElementById('genderError').classList.add('show');
+     valid = false;
+   } else {
+     document.getElementById('genderError').classList.remove('show');
+   }
+   if (!document.querySelector('input[name="smoking"]:checked')) {
+     document.getElementById('smokingError').classList.add('show');
+     valid = false;
+   } else {
+     document.getElementById('smokingError').classList.remove('show');
+   }
+   return valid;
+ }
+ 
+ document.querySelectorAll('.form-input').forEach(input => {
+   input.addEventListener('input', function() {
+     this.classList.remove('error');
+     const errId = this.id + 'Error';
+     const errEl = document.getElementById(errId);
+     if (errEl) errEl.classList.remove('show');
+   });
+ });
+ 
+ /* ===========================================================================
+  *  模块F：错误弹窗函数（新增）
+  * =========================================================================== */
+ function showErrorModal(message) {
+   document.getElementById('errorModalDesc').textContent = message;
+   document.getElementById('errorModalOverlay').classList.remove('hidden');
+ }
+ function closeErrorModal() {
+   document.getElementById('errorModalOverlay').classList.add('hidden');
+ }
+ 
+ /* ===========================================================================
+  *  模块C：提交与评估
+  * =========================================================================== */
+ let gaugeInstance = null;
+ 
+ document.getElementById('assessmentForm').addEventListener('submit', async function(e) {
+   e.preventDefault();
+   if (!validateForm()) return;
+ 
+   const formData = {
+     age: document.getElementById('age').value,
+     gender: document.querySelector('input[name="gender"]:checked')?.value || '0',
+     height: document.getElementById('height').value,
+     weight: document.getElementById('weight').value,
+     sbp: document.getElementById('sbp').value,
+     dbp: document.getElementById('dbp').value,
+     cholesterol: document.getElementById('cholesterol').value,
+     glucose: document.getElementById('glucose').value,
+     hypertension: document.querySelector('input[name="hypertension"]:checked')?.value || '0',
+     diabetes: document.querySelector('input[name="diabetes"]:checked')?.value || '0',
+     smoking: document.querySelector('input[name="smoking"]:checked')?.value || '0',
+     alcohol: document.querySelector('input[name="alcohol"]:checked')?.value || '0',
+     exercise: document.querySelector('input[name="exercise"]:checked')?.value || '0',
+     family_history: document.querySelector('input[name="family_history"]:checked')?.value || '0',
+     bmi: null
+   };
+   const h = parseFloat(formData.height) / 100;
+   const w = parseFloat(formData.weight);
+   if (h && w) formData.bmi = Math.round((w / (h * h)) * 10) / 10;
+ 
+   const btn = document.getElementById('submitBtn');
+   const loadingHint = document.getElementById('loadingHint');
+   btn.classList.add('loading');
+   btn.disabled = true;
+   loadingHint.style.display = 'block';
+ 
+   try {
+     // 将原页面的体检输入转换为后端 DWD 的九个标准字段。
+     const cholesterolValue = parseFloat(formData.cholesterol);
+     const payload = {
+       age: parseInt(formData.age),
+       gender: parseInt(formData.gender),
+       bmi: Number(formData.bmi),
+       cholesterol: cholesterolValue >= 6.2 ? 3 : (cholesterolValue >= 5.2 ? 2 : 1),
+       diabetes: parseInt(formData.diabetes),
+       hypertension: parseInt(formData.hypertension),
+       smoker: parseInt(formData.smoking),
+       alcohol: parseInt(formData.alcohol),
+       exercise: parseInt(formData.exercise)
+     };
+     const resp = await fetch(API_BASE + '/api/risk/predict', {
+       method: 'POST',
+       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+       body: JSON.stringify(payload)
+     });
+     if (!resp.ok) throw new Error('HTTP ' + resp.status);
+     const respData = await resp.json();
+     if (!respData.success) throw new Error(respData.message || '预测请求失败');
+     const prediction = respData.data;
+     const level = prediction.risk_level;
+     const result = {
+       risk_prob: prediction.max_probability * 100,
+       risk_level: level.name,
+       level_class: 'level-' + level.code,
+       guide_text: prediction.risk_summary,
+       color: level.color,
+       suggestions: (prediction.intervention_plan.suggestions || []).map(function(desc) {
+         return { type: 'diet', title: '健康管理建议', desc: desc };
+       })
+     };
+ 
+     renderResults(result);
+     document.getElementById('resultArea').scrollIntoView({ behavior: 'smooth', block: 'start' });
+ 
+   } catch (err) {
+     console.error('[评估] 错误：', err);
+     showErrorModal('评估服务异常：' + err.message + '，请检查后端服务是否已启动后重试。');
+   } finally {
+     btn.classList.remove('loading');
+     btn.disabled = false;
+     loadingHint.style.display = 'none';
+   }
+ });
+ 
+ /* ===========================================================================
+  *  模块D：结果渲染
+  * =========================================================================== */
+ 
+ function renderResults(result) {
+   const area = document.getElementById('resultArea');
+   area.classList.remove('visible');
+   void area.offsetWidth;
+   area.classList.add('visible');
+   area.style.display = 'block';
+ 
+   const card = document.getElementById('riskLevelCard');
+   card.className = 'risk-level-card ' + (result.level_class || '');
+   document.getElementById('riskLevelDisplay').textContent = result.risk_level;
+   document.getElementById('riskProbDisplay').textContent = '发病概率：' + result.risk_prob.toFixed(1) + '%';
+   document.getElementById('guideText').textContent = result.guide_text;
+ 
+   const list = document.getElementById('suggestionList');
+   if (result.suggestions && result.suggestions.length > 0) {
+     const iconMap = {
+       goal: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>',
+       diet: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>',
+       med: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>',
+       warn: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+       activity: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>'
+     };
+     list.innerHTML = result.suggestions.map(s => {
+       const svg = iconMap[s.type] || iconMap.goal;
+       return '<div class="suggestion-item">' +
+         '<div class="icon ' + s.type + '">' + svg + '</div>' +
+         '<div class="content"><div class="title">' + s.title + '</div><div class="desc">' + s.desc + '</div></div>' +
+       '</div>';
+     }).join('');
+   }
+ 
+   renderGauge(result.risk_prob, result.color);
+ }
+ 
+ /* ===========================================================================
+  *  模块E：ECharts 仪表盘
+  * =========================================================================== */
+ function renderGauge(targetValue, color) {
+   const dom = document.getElementById('gaugeChart');
+   if (gaugeInstance) gaugeInstance.dispose();
+   gaugeInstance = echarts.init(dom, null, { renderer: 'canvas' });
+   const colorHex = color || '#3B82F6';
+   const option = {
+     series: [{
+       type: 'gauge',
+       center: ['50%', '60%'],
+       radius: '90%',
+       startAngle: 210,
+       endAngle: -30,
+       min: 0,
+       max: 100,
+       splitNumber: 5,
+       progress: { show: true, width: 10, itemStyle: { color: colorHex } },
+       axisLine: {
+         lineStyle: {
+           width: 10,
+           color: [
+             [0.15, '#22C55E'],
+             [0.35, '#EAB308'],
+             [0.60, '#F97316'],
+             [0.80, '#EA580C'],
+             [1, '#EF4444']
+           ]
+         }
+       },
+       axisTick: { show: false },
+       splitLine: { show: false },
+       axisLabel: { show: false },
+       pointer: { show: false },
+       anchor: { show: false },
+       title: { show: false },
+       detail: {
+         offsetCenter: [0, 30],
+         valueAnimation: true,
+         formatter: function(v) { return v.toFixed(1) + '%'; },
+         fontSize: 32,
+         fontWeight: 700,
+         color: '#0F172A',
+         fontFamily: 'Inter, PingFang SC, sans-serif'
+       }
+     }]
+   };
+   gaugeInstance.setOption(option);
+   let current = 0;
+   const steps = 40;
+   const increment = targetValue / steps;
+   const interval = setInterval(function() {
+     current += increment;
+     if (current >= targetValue) {
+       current = targetValue;
+       clearInterval(interval);
+     }
+     gaugeInstance.setOption({
+       series: [{ data: [{ value: current }] }]
+     });
+   }, 25);
+   window.addEventListener('resize', function() {
+     if (gaugeInstance) gaugeInstance.resize();
+   });
+ }
+ 
+ /* ===========================================================================
+  *  模块F：工具函数
+  * =========================================================================== */
+ function scrollToForm() {
+   document.getElementById('assessmentForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+ }
+ 
+ </script>
+ 
+ </body>
+ </html>

@@ -1,4 +1,11 @@
-from sklearn.metrics import accuracy_score, classification_report, f1_score, roc_auc_score
+from sklearn.metrics import (
+    accuracy_score,
+    confusion_matrix,
+    f1_score,
+    precision_score,
+    recall_score,
+    roc_auc_score,
+)
 
 
 class ModelEvaluator:
@@ -8,12 +15,9 @@ class ModelEvaluator:
         metrics = {
             "accuracy": round(float(accuracy_score(y_true, y_pred)), 4),
             "f1_score": round(float(f1_score(y_true, y_pred, zero_division=0)), 4),
-            "classification_report": classification_report(
-                y_true,
-                y_pred,
-                output_dict=True,
-                zero_division=0,
-            ),
+            "precision": round(float(precision_score(y_true, y_pred, zero_division=0)), 4),
+            "recall": round(float(recall_score(y_true, y_pred, zero_division=0)), 4),
+            "confusion_matrix": confusion_matrix(y_true, y_pred).tolist(),
         }
         if y_prob is not None:
             metrics["roc_auc"] = round(float(roc_auc_score(y_true, y_prob)), 4)
