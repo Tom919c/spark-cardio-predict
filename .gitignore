@@ -4,9 +4,13 @@ data/
 .env
 
 # Python
+# Ignore caches at every directory level, including caches created by tests.
 __pycache__/
+**/__pycache__/
 *.py[cod]
+**/*.py[cod]
 .pytest_cache/
+**/.pytest_cache/
 .coverage
 htmlcov/
 
