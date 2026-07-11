@@ -1,56 +1,58 @@
-def build_risk_interpretation(sample, predicted_probability, risk_level):
-    """Builds a readable explanation of why the sample is low/medium/high risk."""
+def build_risk_interpretation(sample, heart_probability, stroke_probability, final_category):
+    """Builds readable explanations for the dual-model output."""
 
     highlights = []
-    if sample.get("ap_hi", 0) >= 140 or sample.get("ap_lo", 0) >= 90:
-        highlights.append("血压偏高，提示心脑血管负担增加")
+    if sample.get("hypertension", 0) == 1:
+        highlights.append("存在高血压特征，提示心脑血管负担增加")
     if sample.get("cholesterol", 1) >= 2:
         highlights.append("胆固醇水平偏高，存在动脉粥样硬化风险")
-    if sample.get("gluc", 1) >= 2:
-        highlights.append("血糖水平偏高，需要关注代谢风险")
-    if sample.get("smoke", 0) == 1:
-        highlights.append("存在吸烟行为，会增加心脑血管事件概率")
-    if sample.get("alco", 0) == 1:
+    if sample.get("diabetes", 0) == 1:
+        highlights.append("存在糖尿病特征，需要关注代谢与血管风险")
+    if sample.get("smoker", 0) >= 1:
+        highlights.append("存在吸烟相关行为，会增加心脏和脑卒中风险")
+    if sample.get("alcohol", 0) == 1:
         highlights.append("存在饮酒行为，建议关注长期心血管影响")
-    if sample.get("active", 1) == 0:
-        highlights.append("缺乏规律运动，不利于心血管健康管理")
+    if sample.get("exercise", 1) == 0:
+        highlights.append("缺乏规律运动，不利于心脑血管健康管理")
+    if sample.get("bmi", 0) >= 24:
+        highlights.append("BMI 偏高，提示超重或肥胖相关风险")
 
     if not highlights:
         highlights.append("当前主要指标整体相对平稳，未见明显高危特征")
 
     summary = {
-        "low": "当前模型评估为低风险，建议持续保持健康生活方式。",
-        "medium": "当前模型评估为中风险，建议尽快加强生活方式干预并定期复查。",
-        "high": "当前模型评估为高风险，建议尽快前往医疗机构进一步检查与评估。",
-        "unknown": "当前风险等级暂无法明确，建议结合更多临床信息判断。",
+        0: "当前评估为健康状态，未发现明显心脏或脑卒中高风险信号。",
+        1: "当前评估更偏向心脏负面事件风险，需要重点关注心脏相关危险因素。",
+        2: "当前评估更偏向脑卒中风险，需要重点关注脑血管相关危险因素。",
+        3: "当前评估提示心脏和脑卒中双重风险，建议尽快进行系统性检查与干预。",
     }
 
     return {
-        "risk_summary": summary.get(risk_level, summary["unknown"]),
-        "risk_probability_percent": round(predicted_probability * 100, 2)
-        if predicted_probability is not None
+        "risk_summary": summary.get(final_category, summary[0]),
+        "heart_probability_percent": round(heart_probability * 100, 2)
+        if heart_probability is not None
+        else None,
+        "stroke_probability_percent": round(stroke_probability * 100, 2)
+        if stroke_probability is not None
         else None,
         "key_highlights": highlights,
     }
 
 
 def build_indicator_insights(sample):
-    """Generates indicator-level interpretations for major health features."""
+    """Generates indicator-level explanations for the standardized CVD dataset."""
 
     insights = []
 
-    systolic = sample.get("ap_hi")
-    diastolic = sample.get("ap_lo")
-    if systolic is not None and diastolic is not None:
-        blood_pressure_status = "正常"
-        if systolic >= 140 or diastolic >= 90:
-            blood_pressure_status = "偏高"
+    hypertension = sample.get("hypertension")
+    if hypertension is not None:
+        status = "正常" if hypertension == 0 else "偏高风险"
         insights.append(
             {
-                "indicator": "血压",
-                "value": f"{systolic}/{diastolic}",
-                "status": blood_pressure_status,
-                "comment": "血压偏高时建议结合家庭血压监测与医疗随访。",
+                "indicator": "高血压",
+                "value": hypertension,
+                "status": status,
+                "comment": "高血压是心脑血管疾病的重要危险因素。",
             }
         )
 
@@ -66,15 +68,15 @@ def build_indicator_insights(sample):
             }
         )
 
-    gluc = sample.get("gluc")
-    if gluc is not None:
-        status = "正常" if gluc == 1 else "偏高"
+    diabetes = sample.get("diabetes")
+    if diabetes is not None:
+        status = "正常" if diabetes == 0 else "存在风险"
         insights.append(
             {
-                "indicator": "血糖",
-                "value": gluc,
+                "indicator": "糖尿病",
+                "value": diabetes,
                 "status": status,
-                "comment": "血糖异常时建议关注糖代谢与心血管共病风险。",
+                "comment": "糖尿病与心脑血管共病风险密切相关。",
             }
         )
 
@@ -89,6 +91,18 @@ def build_indicator_insights(sample):
                 "value": bmi,
                 "status": status,
                 "comment": "BMI 偏高会增加高血压、糖脂代谢异常风险。",
+            }
+        )
+
+    smoker = sample.get("smoker")
+    if smoker is not None:
+        status_map = {0: "从不吸烟", 1: "曾经吸烟", 2: "当前吸烟"}
+        insights.append(
+            {
+                "indicator": "吸烟状态",
+                "value": smoker,
+                "status": status_map.get(smoker, "未知"),
+                "comment": "吸烟与心脏负面事件和脑卒中风险均相关。",
             }
         )
 

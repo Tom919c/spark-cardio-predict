@@ -1417,3 +1417,104 @@
 - 后续如果要继续增强，建议补：
   - DataService 的 Spark 会话配置项
   - HDFS feature 数据结构校验
+
+### 本次补充修正
+
+修改目的：
+修正新数据集中 `smoker` 和 `target_disease` 的编码处理错误，并补充双标签 `heart_risk / stroke_risk` 生成逻辑。
+
+修改文件：
+
+- `src/spark_jobs/etl_job.py`
+- `src/spark_jobs/feature_build_job.py`
+- `src/ml/feature_engineering.py`
+
+修改作用：
+
+- `smoker` 允许 `0/1/2`
+- `target_disease` 允许 `0/1/2`
+- 特征层新增：
+  - `heart_risk`
+  - `stroke_risk`
+
+### 本次进一步修正
+
+修改目的：
+取消全字段去重逻辑，避免标准化后的多源数据因字段压缩后“看起来重复”而被误删。
+
+修改文件：
+
+- `src/spark_jobs/etl_job.py`
+- `src/ml/feature_engineering.py`
+
+修改作用：
+
+- ETL 清洗阶段不再执行 `dropDuplicates()`
+- 单机清洗阶段不再执行 `drop_duplicates()`
+- 保留特征相同但并非同一人的样本记录
+
+---
+
+## 第 13 部分：双模型接口层与结果实体收口
+
+### 修改文件
+
+- `src/models/risk_result.py`
+- `src/controllers/risk_controller.py`
+
+### 1. `src/models/risk_result.py`
+
+修改目的：
+把结果实体从单模型二分类结构调整为适配双模型联合输出的结构。
+
+文件作用：
+这是风险结果实体层，负责承载双模型组合后的最终分类结果。
+
+涉及函数说明：
+
+- `__init__`
+  作用：初始化双模型联合风险结果对象。
+  功能：保存最终类别、风险等级、模型标识、中文说明、指标解读和干预方案。
+  职责：承载最终四类风险结果数据。
+
+- `to_dict`
+  作用：把联合风险结果转换成字典。
+  功能：方便接口直接返回 JSON。
+  职责：负责最终结果序列化。
+
+### 2. `src/controllers/risk_controller.py`
+
+修改目的：
+把预测接口从单模型单路径输入调整为双模型双路径输入。
+
+文件作用：
+继续作为风险模块控制层，这一阶段负责接收双模型训练和预测请求。
+
+涉及函数说明：
+
+- `risk_summary`
+  作用：返回平台摘要。
+  功能：展示当前双模型风险平台状态。
+  职责：负责状态输出。
+
+- `train_risk_model`
+  作用：触发双模型多轮训练。
+  功能：接收模型名、轮数、实验标签并调用服务层。
+  职责：负责训练接口编排。
+
+- `predict_single_risk`
+  作用：触发双模型单人预测。
+  功能：接收 `heart_model_path` 和 `stroke_model_path` 以及个人指标，调用服务层输出四类联合结果。
+  职责：负责双模型预测接口入口和参数校验。
+
+### 当前阶段你需要检查什么
+
+- `/api/risk/predict` 是否已要求：
+  - `heart_model_path`
+  - `stroke_model_path`
+- 训练接口返回文案是否已体现双模型训练
+
+### 当前阶段还缺少哪些真实元素
+
+- 这一阶段不缺新的真实业务参数
+- 后续验证时需要使用真实存在的双模型文件路径

@@ -2,12 +2,12 @@ from sklearn.metrics import accuracy_score, classification_report, f1_score, roc
 
 
 class ModelEvaluator:
-    """Evaluates trained model performance using baseline classification metrics."""
+    """Evaluates binary subtask models used in the dual-model pipeline."""
 
-    def evaluate(self, y_true, y_pred, y_prob=None):
+    def evaluate_binary(self, y_true, y_pred, y_prob=None):
         metrics = {
             "accuracy": round(float(accuracy_score(y_true, y_pred)), 4),
-            "f1_score": round(float(f1_score(y_true, y_pred)), 4),
+            "f1_score": round(float(f1_score(y_true, y_pred, zero_division=0)), 4),
             "classification_report": classification_report(
                 y_true,
                 y_pred,

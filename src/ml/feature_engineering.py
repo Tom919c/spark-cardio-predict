@@ -2,7 +2,7 @@ import pandas as pd
 
 
 class CardioFeatureEngineering:
-    """First-stage preprocessing for the cardio_train dataset."""
+    """Preprocessing for the standardized CVD dataset."""
 
     def __init__(self, feature_columns, target_column, test_size, random_state):
         self.feature_columns = feature_columns
@@ -32,45 +32,45 @@ class CardioFeatureEngineering:
     def build_training_dataframe(self, dataframe):
         working_frame = dataframe.copy()
         working_frame = self._clean_basic_values(working_frame)
-
-        if "age" in working_frame.columns:
-            # The common cardio dataset stores age in days; convert it for readability.
-            working_frame["age_years"] = (working_frame["age"] / 365).round(1)
-
-        if {"height", "weight"}.issubset(working_frame.columns):
-            height_in_meters = working_frame["height"] / 100
-            working_frame["bmi"] = (
-                working_frame["weight"] / (height_in_meters * height_in_meters)
-            ).round(2)
+        working_frame = self._build_dual_targets(working_frame)
 
         available_features = [
             column for column in self.feature_columns if column in working_frame.columns
         ]
-        if "age_years" in working_frame.columns:
-            available_features.append("age_years")
-        if "bmi" in working_frame.columns:
-            available_features.append("bmi")
 
-        model_frame = working_frame[available_features + [self.target_column]].copy()
+        model_frame = working_frame[
+            available_features + [self.target_column, "heart_risk", "stroke_risk"]
+        ].copy()
         model_frame = model_frame.dropna()
         return model_frame
 
     def _clean_basic_values(self, dataframe):
         cleaned_frame = dataframe.copy()
-        cleaned_frame = cleaned_frame.drop_duplicates()
 
-        numeric_columns = [
-            "age",
-            "height",
-            "weight",
-            "ap_hi",
-            "ap_lo",
-        ]
+        numeric_columns = ["age", "bmi", "cholesterol"]
         for column in numeric_columns:
             if column in cleaned_frame.columns:
                 cleaned_frame = cleaned_frame[cleaned_frame[column] > 0]
 
-        if {"ap_hi", "ap_lo"}.issubset(cleaned_frame.columns):
-            cleaned_frame = cleaned_frame[cleaned_frame["ap_hi"] >= cleaned_frame["ap_lo"]]
+        binary_like_columns = ["gender", "diabetes", "hypertension", "alcohol", "exercise"]
+        for column in binary_like_columns:
+            if column in cleaned_frame.columns:
+                cleaned_frame = cleaned_frame[cleaned_frame[column].isin([0, 1])]
+
+        if "smoker" in cleaned_frame.columns:
+            cleaned_frame = cleaned_frame[cleaned_frame["smoker"].isin([0, 1, 2])]
+
+        if self.target_column in cleaned_frame.columns:
+            cleaned_frame = cleaned_frame[cleaned_frame[self.target_column].isin([0, 1, 2])]
+
+        if "cholesterol" in cleaned_frame.columns:
+            cleaned_frame = cleaned_frame[cleaned_frame["cholesterol"].isin([1, 2, 3])]
 
         return cleaned_frame
+
+    def _build_dual_targets(self, dataframe):
+        target_frame = dataframe.copy()
+        if self.target_column in target_frame.columns:
+            target_frame["heart_risk"] = (target_frame[self.target_column] == 1).astype(int)
+            target_frame["stroke_risk"] = (target_frame[self.target_column] == 2).astype(int)
+        return target_frame

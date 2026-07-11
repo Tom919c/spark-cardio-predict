@@ -388,3 +388,102 @@
 - 最终 Accuracy：`0.7202`
 - 最终 F1 Score：`0.7048`
 - 最终 ROC AUC：`0.7826`
+
+---
+
+## 自动训练记录 2026-07-10 19:41:32
+- 模型名称：`random_forest`
+- 训练轮数：`2`
+- 实验标签：``
+- 最优选择指标：`roc_auc`
+
+### 每轮结果
+
+#### 第 1 轮
+- run_id：`random_forest_round1_20260710_194127`
+- 随机种子：`42`
+- 模型路径：`data\feature\models\random_forest_round1_20260710_194127.joblib`
+- Accuracy：`0.7339`
+- F1 Score：`0.7175`
+- ROC AUC：`0.8033`
+
+#### 第 2 轮
+- run_id：`random_forest_round2_20260710_194132`
+- 随机种子：`43`
+- 模型路径：`data\feature\models\random_forest_round2_20260710_194132.joblib`
+- Accuracy：`0.7334`
+- F1 Score：`0.7179`
+- ROC AUC：`0.7974`
+
+### 最终最佳结果
+- 最佳轮次：`第 1 轮`
+- 最佳模型路径：`data\feature\models\random_forest_round1_20260710_194127.joblib`
+- 最终 Accuracy：`0.7339`
+- 最终 F1 Score：`0.7175`
+- 最终 ROC AUC：`0.8033`
+
+---
+
+## 自动训练记录 2026-07-11 07:59:39
+- 模型名称：`random_forest`
+- 训练轮数：`2`
+- 实验标签：``
+- 最优选择指标：`roc_auc`
+
+### 每轮结果
+
+#### 第 1 轮
+- run_id：`random_forest_round1_20260711_075936`
+- 随机种子：`42`
+- 模型路径：`data\feature\models\random_forest_round1_20260711_075936.joblib`
+- Accuracy：`0.6994`
+- F1 Score：`0.5156`
+- ROC AUC：`0.7458`
+
+#### 第 2 轮
+- run_id：`random_forest_round2_20260711_075939`
+- 随机种子：`43`
+- 模型路径：`data\feature\models\random_forest_round2_20260711_075939.joblib`
+- Accuracy：`0.6977`
+- F1 Score：`0.5159`
+- ROC AUC：`0.7415`
+
+### 最终最佳结果
+- 最佳轮次：`第 1 轮`
+- 最佳模型路径：`data\feature\models\random_forest_round1_20260711_075936.joblib`
+- 最终 Accuracy：`0.6994`
+- 最终 F1 Score：`0.5156`
+- 最终 ROC AUC：`0.7458`
+
+---
+
+## 自动训练记录 2026-07-11 09:12:46
+- 模型名称：`random_forest`
+- 训练轮数：`2`
+- 实验标签：``
+- 最优选择指标：`roc_auc`
+
+### 每轮结果
+
+#### 第 1 轮
+- run_id：``
+- 随机种子：`42`
+- 模型路径：``
+- Accuracy：``
+- F1 Score：``
+- ROC AUC：``
+
+#### 第 2 轮
+- run_id：``
+- 随机种子：`43`
+- 模型路径：``
+- Accuracy：``
+- F1 Score：``
+- ROC AUC：``
+
+### 最终最佳结果
+- 最佳轮次：`第 1 轮`
+- 最佳模型路径：``
+- 最终 Accuracy：``
+- 最终 F1 Score：``
+- 最终 ROC AUC：``

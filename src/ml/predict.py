@@ -3,16 +3,23 @@ import pandas as pd
 
 
 class CardioRiskPredictor:
-    """Loads a trained model and predicts cardiovascular risk for input samples."""
+    """Loads trained heart and stroke models and predicts dual risk outputs."""
 
-    def predict(self, model_path, sample):
-        model = joblib.load(model_path)
+    def predict(self, heart_model_path, stroke_model_path, sample):
+        heart_model = joblib.load(heart_model_path)
+        stroke_model = joblib.load(stroke_model_path)
         sample_frame = self._build_sample_frame(sample)
-        predicted_label = int(model.predict(sample_frame)[0])
-        probability = self._predict_probability(model, sample_frame)
+
+        heart_label = int(heart_model.predict(sample_frame)[0])
+        stroke_label = int(stroke_model.predict(sample_frame)[0])
+        heart_probability = self._predict_probability(heart_model, sample_frame)
+        stroke_probability = self._predict_probability(stroke_model, sample_frame)
+
         return {
-            "predicted_label": predicted_label,
-            "predicted_probability": probability,
+            "heart_predicted_label": heart_label,
+            "stroke_predicted_label": stroke_label,
+            "heart_predicted_probability": heart_probability,
+            "stroke_predicted_probability": stroke_probability,
         }
 
     def _predict_probability(self, model, sample_frame):
@@ -22,15 +29,6 @@ class CardioRiskPredictor:
 
     def _build_sample_frame(self, sample):
         working_sample = dict(sample)
-        if "age" in working_sample and "age_years" not in working_sample:
-            working_sample["age_years"] = round(working_sample["age"] / 365, 1)
-        if (
-            "height" in working_sample
-            and "weight" in working_sample
-            and "bmi" not in working_sample
-        ):
-            height_in_meters = working_sample["height"] / 100
-            working_sample["bmi"] = round(
-                working_sample["weight"] / (height_in_meters * height_in_meters), 2
-            )
+        if "bmi" in working_sample:
+            working_sample["bmi"] = round(float(working_sample["bmi"]), 2)
         return pd.DataFrame([working_sample])

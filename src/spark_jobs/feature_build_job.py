@@ -5,7 +5,7 @@ from pyspark.sql.functions import col, round as spark_round
 
 
 class CardioFeatureBuildJob:
-    """Builds distributed training features for the cardiovascular dataset."""
+    """Builds distributed training features for the standardized CVD dataset."""
 
     def __init__(self, input_path, output_path):
         self.input_path = input_path
@@ -29,30 +29,26 @@ class CardioFeatureBuildJob:
         )
 
     def _build_features(self, dataframe):
-        feature_df = dataframe.withColumn(
-            "age_years", spark_round(col("age") / 365, 1)
+        feature_df = dataframe.withColumn("bmi", spark_round(col("bmi"), 2))
+        feature_df = feature_df.withColumn(
+            "heart_risk", (col("target_disease") == 1).cast("int")
         )
         feature_df = feature_df.withColumn(
-            "bmi",
-            spark_round(
-                col("weight") / ((col("height") / 100) * (col("height") / 100)), 2
-            ),
+            "stroke_risk", (col("target_disease") == 2).cast("int")
         )
         return feature_df.select(
             "age",
             "gender",
-            "height",
-            "weight",
-            "ap_hi",
-            "ap_lo",
-            "cholesterol",
-            "gluc",
-            "smoke",
-            "alco",
-            "active",
-            "age_years",
             "bmi",
-            "cardio",
+            "cholesterol",
+            "diabetes",
+            "hypertension",
+            "smoker",
+            "alcohol",
+            "exercise",
+            "target_disease",
+            "heart_risk",
+            "stroke_risk",
         )
 
     def _write_output(self, dataframe):

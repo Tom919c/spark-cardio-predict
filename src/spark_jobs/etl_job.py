@@ -5,7 +5,7 @@ from pyspark.sql.functions import col
 
 
 class CardioETLJob:
-    """Runs distributed ETL cleaning for the cardiovascular dataset."""
+    """Runs distributed ETL cleaning for the standardized CVD dataset."""
 
     def __init__(self, input_path, output_path, separator=";"):
         self.input_path = input_path
@@ -31,10 +31,14 @@ class CardioETLJob:
         )
 
     def _clean_dataframe(self, dataframe):
-        cleaned = dataframe.dropDuplicates()
-        for field_name in ["age", "height", "weight", "ap_hi", "ap_lo"]:
+        cleaned = dataframe
+        for field_name in ["age", "bmi", "cholesterol"]:
             cleaned = cleaned.filter(col(field_name) > 0)
-        cleaned = cleaned.filter(col("ap_hi") >= col("ap_lo"))
+        for field_name in ["gender", "diabetes", "hypertension", "alcohol", "exercise"]:
+            cleaned = cleaned.filter(col(field_name).isin([0, 1]))
+        cleaned = cleaned.filter(col("smoker").isin([0, 1, 2]))
+        cleaned = cleaned.filter(col("target_disease").isin([0, 1, 2]))
+        cleaned = cleaned.filter(col("cholesterol").isin([1, 2, 3]))
         return cleaned
 
     def _write_output(self, dataframe):

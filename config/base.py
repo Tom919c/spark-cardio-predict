@@ -10,7 +10,7 @@ class BaseConfig:
     # Local dataset configuration.
     DATASET_FILE_PATH = "data/raw/datasets/cardio_train.csv"
     DATASET_ENCODING = "utf-8"
-    DATASET_SEPARATOR = ";"
+    DATASET_SEPARATOR = ","
 
     # Distributed processing configuration.
     DISTRIBUTED_MODE_ENABLED = True
@@ -43,17 +43,15 @@ class BaseConfig:
     CARDIO_FEATURE_COLUMNS = [
         "age",
         "gender",
-        "height",
-        "weight",
-        "ap_hi",
-        "ap_lo",
+        "bmi",
         "cholesterol",
-        "gluc",
-        "smoke",
-        "alco",
-        "active",
+        "diabetes",
+        "hypertension",
+        "smoker",
+        "alcohol",
+        "exercise",
     ]
-    CARDIO_TARGET_COLUMN = "cardio"
+    CARDIO_TARGET_COLUMN = "target_disease"
     TRAIN_TEST_SPLIT_RATIO = 0.2
     RANDOM_STATE = 42
 
