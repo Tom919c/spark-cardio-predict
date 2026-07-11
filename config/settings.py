@@ -1,4 +1,4 @@
-"""Configuration helpers shared by local Flask and WSL Spark execution."""
+"""项目配置：本地 Flask 与 WSL Spark 共用的环境变量解析层。"""
 
 from __future__ import annotations
 
@@ -10,11 +10,11 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
 def _load_local_env() -> None:
-    """Load a small .env file without making application startup depend on a package."""
-    # .env 仅覆盖未在系统环境中显式设置的变量，方便本地和 Linux 共用配置模板。
+    """加载 .env 文件（不引入 python-dotenv 依赖）。"""
     env_file = PROJECT_ROOT / ".env"
     if not env_file.exists():
         return
+
     for line in env_file.read_text(encoding="utf-8").splitlines():
         line = line.strip()
         if not line or line.startswith("#") or "=" not in line:
@@ -47,17 +47,8 @@ def _project_path(value: str) -> str:
     return str(path if path.is_absolute() else PROJECT_ROOT / path)
 
 
-def _first_existing_path(*candidates: str) -> str:
-    """Prefer the reconstructed path while tolerating a temporarily locked local file."""
-    for candidate in candidates:
-        resolved = _project_path(candidate)
-        if Path(resolved).exists():
-            return resolved
-    return _project_path(candidates[0])
-
-
 class BaseConfig:
-    """Runtime settings with safe local defaults for a fresh clone."""
+    """运行时配置，clone 后开箱即用的安全默认值。"""
 
     APP_NAME = "CardioSpark"
     SECRET_KEY = os.getenv("SECRET_KEY", "development-only-secret")
@@ -65,28 +56,29 @@ class BaseConfig:
 
     HOST = os.getenv("HOST", "127.0.0.1")
     PORT = _as_int("PORT", 5000)
+    DEBUG = _as_bool(os.getenv("DEBUG"), True)
     APP_ENV = os.getenv("APP_ENV", "development")
 
-    # 默认本地模式，确保未启动 HDFS 时 Flask 仍可用于演示和接口测试。
+    # 默认本地模式，未启动 HDFS 时 Flask 仍可用于演示和接口测试。
     DATA_MODE = os.getenv("DATA_MODE", "local").strip().lower()
     DISTRIBUTED_MODE_ENABLED = DATA_MODE == "hdfs"
     DATASET_FILE_PATH = _project_path(
-        os.getenv("DATASET_FILE_PATH", "data/dwd/CVD_Standard_DWD.csv")
+        os.getenv("DATASET_FILE_PATH", "data/raw/CVD_Standard_DWD.csv")
     )
     POPULATION_DATASET_PATH = _project_path(
-        os.getenv("POPULATION_DATASET_PATH", "data/dws/chengdu_resident_health_simulated.csv")
+        os.getenv("POPULATION_DATASET_PATH", "data/chengdu_resident_health_simulated.csv")
     )
-    STAGING_DATA_PATH = _project_path("data/dwd/CVD_Standard_DWD.csv")
-    FEATURE_DATA_PATH = _project_path("data/feature/cardio_features.csv")
-    MODEL_OUTPUT_DIR = _project_path(os.getenv("MODEL_OUTPUT_DIR", "data/ads/models"))
-    MODEL_MANIFEST_PATH = _project_path("data/ads/models/active_models.json")
+    STAGING_DATA_PATH = _project_path("data/raw/CVD_Standard_DWD.csv")
+    FEATURE_DATA_PATH = _project_path("data/features/cardio_features.csv")
+    MODEL_OUTPUT_DIR = _project_path(os.getenv("MODEL_OUTPUT_DIR", "data/models"))
+    MODEL_MANIFEST_PATH = _project_path("data/models/active_models.json")
     DATASET_ENCODING = os.getenv("DATASET_ENCODING", "utf-8")
     DATASET_SEPARATOR = os.getenv("DATASET_SEPARATOR", ",")
 
-    # 仅在 WSL2/VMware Linux 使用 DATA_MODE=hdfs 时读取以下伪分布式参数。
+    # 仅在 WSL2/VMware Linux 且 DATA_MODE=hdfs 时读取以下伪分布式参数。
     HDFS_NAMENODE_URI = os.getenv("HDFS_NAMENODE_URI", "hdfs://localhost:9000")
     HDFS_WEB_URL = os.getenv("HDFS_WEB_URL", "http://localhost:9870")
-    # 默认使用当前系统用户，团队成员可在 .env 中显式覆盖为 Hadoop 用户名。
+    # 默认使用当前系统用户，团队成员可在 .env 中覆盖为 Hadoop 用户名。
     HDFS_USER = (
         os.getenv("HDFS_USER")
         or os.getenv("USER")
@@ -124,7 +116,7 @@ class BaseConfig:
     RANDOM_STATE = _as_int("RANDOM_STATE", 42)
     RANDOM_FOREST_TREES = _as_int("RANDOM_FOREST_TREES", 200)
 
-    # 阶段一业务边界固定为两个独立事件模型，不在此处扩展额外疾病类型。
+    # 阶段一固定为两个独立事件模型，不在此处扩展额外疾病类型。
     RISK_TARGETS = {
         "heart": HEART_LABEL_COLUMN,
         "stroke": STROKE_LABEL_COLUMN,

@@ -1,3 +1,5 @@
+"""数据服务层：处理本地和分布式模式下的数据集加载、预处理与训练数据构建。"""
+
 from pathlib import Path
 
 import pandas as pd
@@ -7,13 +9,13 @@ from src.utils.validator import DatasetValidator
 
 
 class DataService:
-    """Handles local and distributed dataset loading for preprocessing and training."""
+    """处理本地 CSV 和 HDFS 分布式模式下的数据集加载。"""
 
     def __init__(self, config):
         self.config = config
         self.dataset_path = config.get("DATASET_FILE_PATH", "")
         self.dataset_encoding = config.get("DATASET_ENCODING", "utf-8")
-        self.dataset_separator = config.get("DATASET_SEPARATOR", ";")
+        self.dataset_separator = config.get("DATASET_SEPARATOR", ",")
         self.distributed_mode_enabled = config.get("DISTRIBUTED_MODE_ENABLED", False)
         self.staging_data_path = config.get("STAGING_DATA_PATH", "")
         self.feature_data_path = config.get("FEATURE_DATA_PATH", "")
@@ -21,7 +23,9 @@ class DataService:
         self.hdfs_staging_path = config.get("HDFS_STAGING_PATH", "")
         self.hdfs_feature_path = config.get("HDFS_FEATURE_PATH", "")
         self.feature_columns = config.get("CARDIO_FEATURE_COLUMNS", [])
-        self.target_column = config.get("CARDIO_TARGET_COLUMN", "cardio")
+        self.target_column = config.get("CARDIO_TARGET_COLUMN", "target_disease")
+        self.heart_label_column = config.get("HEART_LABEL_COLUMN", "label_heart")
+        self.stroke_label_column = config.get("STROKE_LABEL_COLUMN", "label_stroke")
         self.test_size = config.get("TRAIN_TEST_SPLIT_RATIO", 0.2)
         self.random_state = config.get("RANDOM_STATE", 42)
 
@@ -69,19 +73,13 @@ class DataService:
     def preprocess_dataset(self):
         profile = self.get_dataset_profile()
         if not profile["configured"] or not profile["exists"]:
-            return {
-                **profile,
-                "valid": False,
-            }
+            return {**profile, "valid": False}
 
         dataframe = self.load_dataset()
         validator = DatasetValidator(required_columns=self.feature_columns)
         validation_result = validator.validate_columns(dataframe.columns.tolist())
         if not validation_result["valid"]:
-            return {
-                **profile,
-                **validation_result,
-            }
+            return {**profile, **validation_result}
 
         engineer = CardioFeatureEngineering(
             feature_columns=self.feature_columns,
@@ -90,11 +88,7 @@ class DataService:
             random_state=self.random_state,
         )
         transformed = engineer.transform(dataframe)
-        return {
-            **profile,
-            **validation_result,
-            **transformed,
-        }
+        return {**profile, **validation_result, **transformed}
 
     def get_training_dataframe(self):
         profile = self.get_dataset_profile()
@@ -121,7 +115,7 @@ class DataService:
         return engineer.build_training_dataframe(dataframe)
 
     def _load_distributed_feature_dataframe(self):
-        """Read the Spark feature result only when HDFS mode was explicitly enabled."""
+        """HDFS 模式下从 Spark 特征输出目录读取训练数据。"""
         if self.hdfs_feature_path:
             from pyspark.sql import SparkSession
 

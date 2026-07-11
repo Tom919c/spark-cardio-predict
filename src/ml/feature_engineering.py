@@ -1,10 +1,12 @@
+"""特征工程：从标准化数据构建无数据泄漏的双标签训练集。"""
+
 import pandas as pd
 from sklearn.experimental import enable_iterative_imputer  # noqa: F401
 from sklearn.impute import IterativeImputer
 
 
 class CardioFeatureEngineering:
-    """Builds a leak-free, two-label training frame from standardized data."""
+    """构建无泄漏的双标签训练数据集。"""
 
     def __init__(self, feature_columns, target_column, test_size, random_state):
         self.feature_columns = feature_columns
@@ -19,10 +21,7 @@ class CardioFeatureEngineering:
         test_frame = model_frame.iloc[split_index:].copy()
 
         return {
-            "processed_shape": [
-                int(model_frame.shape[0]),
-                int(model_frame.shape[1]),
-            ],
+            "processed_shape": [int(model_frame.shape[0]), int(model_frame.shape[1])],
             "processed_columns": model_frame.columns.tolist(),
             "processed_preview": model_frame.head(5).to_dict(orient="records"),
             "train_shape": [int(train_frame.shape[0]), int(train_frame.shape[1])],
@@ -32,7 +31,7 @@ class CardioFeatureEngineering:
         }
 
     def build_training_dataframe(self, dataframe):
-        missing = [column for column in self.feature_columns if column not in dataframe]
+        missing = [c for c in self.feature_columns if c not in dataframe]
         if missing:
             raise ValueError(f"数据缺少必要特征列: {missing}")
 
@@ -54,7 +53,7 @@ class CardioFeatureEngineering:
 
     def _build_dual_targets(self, dataframe):
         target_frame = dataframe.copy()
-        # 新版 DWD 优先使用独立标签；旧三分类数据只作为兼容输入，避免破坏历史样本。
+        # 新版 DWD 优先使用独立标签；旧三分类数据只作为兼容输入。
         if "label_heart" not in target_frame:
             if self.target_column not in target_frame:
                 raise ValueError("数据缺少 label_heart 和兼容目标列 target_disease。")
@@ -72,8 +71,8 @@ class CardioFeatureEngineering:
         frame["bmi"] = frame["bmi"].clip(10.3, 79.8).round(2)
         frame["cholesterol"] = frame["cholesterol"].clip(1, 3).round().astype(int)
         frame["smoker"] = frame["smoker"].clip(0, 2).round().astype(int)
-        for column in ("gender", "diabetes", "hypertension", "alcohol", "exercise"):
-            frame[column] = frame[column].clip(0, 1).round().astype(int)
+        for col in ("gender", "diabetes", "hypertension", "alcohol", "exercise"):
+            frame[col] = frame[col].clip(0, 1).round().astype(int)
         return frame
 
     @staticmethod
@@ -82,4 +81,4 @@ class CardioFeatureEngineering:
             return pd.Series(1.0, index=dataframe.index)
         # 本地人群在混合训练中提高权重，未标记地域的数据保持默认权重。
         local = dataframe["region"].astype(str).str.contains("成都|四川|中国", regex=True)
-        return local.map({True: 4.0, False: 1.0})
+        return local.map({True: 4.0, False: 1.0}).fillna(1.0)

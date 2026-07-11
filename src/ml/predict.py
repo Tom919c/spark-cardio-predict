@@ -1,9 +1,11 @@
+"""双模型预测器：加载心脏与卒中模型并输出联合预测结果。"""
+
 import joblib
 import pandas as pd
 
 
 class CardioRiskPredictor:
-    """Loads trained heart and stroke models and predicts dual risk outputs."""
+    """加载已训练的双模型，对单样本执行预测。"""
 
     def predict(self, model_paths, sample):
         heart_model = joblib.load(model_paths["heart"])

@@ -1,8 +1,8 @@
-"""Two independent random-forest training with local prevalence calibration."""
+"""双独立随机森林训练：校准集拆分 + 保序概率校准。"""
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 
 import joblib
@@ -15,7 +15,7 @@ from src.ml.evaluate import ModelEvaluator
 
 
 class CardioModelTrainer:
-    """Trains calibrated heart-event and stroke-event random forest models."""
+    """训练心脏事件与卒中事件两个独立随机森林模型。"""
 
     def __init__(self, config):
         self.config = config
@@ -27,7 +27,7 @@ class CardioModelTrainer:
         self.targets = config["RISK_TARGETS"]
 
     def train(self, dataframe, run_label="phase1"):
-        """Return artifact paths and metrics for the two supported risk targets."""
+        """训练两个目标模型并返回产物路径、评估指标和特征重要性。"""
         results = {}
         for target_name, target_column in self.targets.items():
             results[target_name] = self._train_target(
@@ -38,7 +38,7 @@ class CardioModelTrainer:
             )
         return {
             "strategy": "two_independent_random_forests_with_isotonic_calibration",
-            "trained_at": datetime.now(timezone.utc).isoformat(),
+            "trained_at": datetime.utcnow().isoformat(),
             "features": self.feature_columns,
             "targets": results,
         }
@@ -48,24 +48,22 @@ class CardioModelTrainer:
         target = dataframe[target_column].astype(int)
         weights = dataframe.get("sample_weight")
 
+        # 拆出测试集，stratify 保证正负样本比例一致。
         x_train, x_test, y_train, y_test, weight_train, _ = train_test_split(
-            features,
-            target,
-            weights,
+            features, target, weights,
             test_size=self.test_size,
             random_state=self.random_state,
             stratify=target,
         )
+
+        # 从训练集中再拆出校准集，校准器不拟合训练样本，避免数据泄漏。
         x_fit, x_calibrate, y_fit, y_calibrate, weight_fit, weight_calibrate = train_test_split(
-            x_train,
-            y_train,
-            weight_train,
+            x_train, y_train, weight_train,
             test_size=0.2,
             random_state=self.random_state,
             stratify=y_train,
         )
 
-        # 校准集不参与随机森林拟合，避免概率校准直接记住训练样本。
         estimator = RandomForestClassifier(
             n_estimators=self.n_estimators,
             max_depth=10,
@@ -74,6 +72,7 @@ class CardioModelTrainer:
             n_jobs=-1,
         )
         estimator.fit(x_fit, y_fit, sample_weight=weight_fit)
+
         calibrator = IsotonicRegression(out_of_bounds="clip")
         calibrator.fit(
             estimator.predict_proba(x_calibrate)[:, 1],
@@ -81,6 +80,7 @@ class CardioModelTrainer:
             sample_weight=weight_calibrate,
         )
         model = CalibratedRiskModel(estimator, calibrator, self.feature_columns)
+
         probabilities = model.predict_proba(x_test)[:, 1]
         predictions = model.predict(x_test)
         metrics = ModelEvaluator().evaluate_binary(y_test, predictions, probabilities)
@@ -98,8 +98,10 @@ class CardioModelTrainer:
     def _save_model(self, model, target_name, run_label):
         self.model_output_dir.mkdir(parents=True, exist_ok=True)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        safe_label = "".join(character for character in run_label if character.isalnum() or character in "_-")
-        filename = f"random_forest_{target_name}_{safe_label or 'run'}_{timestamp}.joblib"
+        safe_label = "".join(
+            c for c in run_label if c.isalnum() or c in "_-"
+        ) or "run"
+        filename = f"random_forest_{target_name}_{safe_label}_{timestamp}.joblib"
         path = self.model_output_dir / filename
         joblib.dump(model, path)
         return path

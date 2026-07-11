@@ -12,8 +12,15 @@ from src.services.risk_service import RiskService
 
 
 FEATURES = [
-    "age", "gender", "bmi", "cholesterol", "diabetes", "hypertension",
-    "smoker", "alcohol", "exercise",
+    "age",
+    "gender",
+    "bmi",
+    "cholesterol",
+    "diabetes",
+    "hypertension",
+    "smoker",
+    "alcohol",
+    "exercise",
 ]
 
 
@@ -40,6 +47,7 @@ def test_registry_and_risk_service_use_server_managed_models(tmp_path):
     manifest_text = registry_path.read_text(encoding="utf-8")
     assert "D:\\" not in manifest_text
     assert '"version": 2' in manifest_text
+
     config = {
         "CARDIO_FEATURE_COLUMNS": FEATURES,
         "RISK_LEVEL_THRESHOLDS": (0.15, 0.35, 0.6, 0.8),
@@ -56,6 +64,8 @@ def test_registry_and_risk_service_use_server_managed_models(tmp_path):
          "hypertension": 1, "smoker": 2, "alcohol": 1, "exercise": 0}
     )
 
-    assert "heart_probability" in result
-    assert "stroke_probability" in result
+    assert "heart_predicted_probability" in result
+    assert "stroke_predicted_probability" in result
+    assert "combined_shap_summary" in result
+    assert "risk_level" in result
     assert result["risk_level"]["code"] in {1, 2, 3, 4, 5}

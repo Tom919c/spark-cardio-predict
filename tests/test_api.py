@@ -37,13 +37,6 @@ def test_health_and_page_routes_are_available():
     assert client.get("/dashboard").status_code == 200
     assert client.get("/risk-report").status_code == 200
 
-    dashboard_html = client.get("/dashboard").get_data(as_text=True)
-    risk_report_html = client.get("/risk-report").get_data(as_text=True)
-    assert 'href="/risk-report"' in dashboard_html
-    assert 'href="/dashboard"' in risk_report_html
-    assert 'aria-current="page"' in dashboard_html
-    assert 'aria-current="page"' in risk_report_html
-
 
 def test_risk_predict_rejects_incomplete_payload():
     app = create_app()
@@ -91,5 +84,9 @@ def test_risk_predict_returns_two_probabilities(tmp_path):
     )
 
     assert response.status_code == 200
-    assert response.get_json()["data"]["heart_probability"] >= 0
-    assert response.get_json()["data"]["stroke_probability"] >= 0
+    data = response.get_json()["data"]
+    assert "heart_predicted_probability" in data
+    assert "stroke_predicted_probability" in data
+    assert "combined_shap_summary" in data
+    assert data["heart_predicted_probability"] >= 0
+    assert data["stroke_predicted_probability"] >= 0

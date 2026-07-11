@@ -1,4 +1,4 @@
-"""Population-level aggregates used by the institutional dashboard."""
+"""群体健康分析服务：基于成都仿真人口数据提供大屏聚合统计。"""
 
 from __future__ import annotations
 
@@ -9,23 +9,15 @@ import pandas as pd
 
 
 class PopulationService:
-    """Provides local CSV aggregates matching the Spark population jobs."""
+    """提供本地 CSV 聚合统计，接口与 Spark 群体分析任务对齐。"""
 
     _dataframe_cache = {}
     _cache_lock = Lock()
 
     REQUIRED_COLUMNS = [
-        "age",
-        "district",
-        "age_group",
-        "bmi",
-        "hypertension",
-        "diabetes",
-        "cholesterol",
-        "smoker",
-        "exercise",
-        "label_heart",
-        "label_stroke",
+        "age", "district", "age_group", "bmi",
+        "hypertension", "diabetes", "cholesterol", "smoker", "exercise",
+        "label_heart", "label_stroke",
     ]
 
     def __init__(self, config):
@@ -83,7 +75,7 @@ class PopulationService:
             if cached and cached[0] == cache_version:
                 return cached[1]
 
-            # 分块读取并只保留大屏列，避免一次加载 200 万行扩展字段占用过多内存。
+            # 分块读取并只保留大屏列，避免一次加载大量行占用过多内存。
             chunks = pd.read_csv(
                 self.population_path,
                 usecols=self.REQUIRED_COLUMNS,

@@ -1,4 +1,4 @@
-"""Model artifact discovery and metadata management for the two-model platform."""
+"""模型产物发现与元数据管理：仅通过清单文件定位活跃模型。"""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from pathlib import Path
 
 
 class ModelRegistry:
-    """Keeps the active heart and stroke artifacts independent of browser input."""
+    """管理心脏与卒中两个独立模型的活跃清单。"""
 
     def __init__(self, model_dir: str, manifest_path: str, feature_columns=None):
         self.model_dir = Path(model_dir)
@@ -16,25 +16,31 @@ class ModelRegistry:
         self.feature_columns = list(feature_columns or [])
 
     def load_active_models(self) -> dict:
-        if self.manifest_path.exists():
-            manifest = json.loads(self.manifest_path.read_text(encoding="utf-8"))
-            if manifest.get("version") != 2:
-                raise FileNotFoundError("模型清单版本过旧，请完成当前版本训练后再使用。")
-            if self.feature_columns and manifest.get("feature_columns") != self.feature_columns:
-                raise FileNotFoundError("模型清单与当前特征契约不一致，请重新训练。")
-            models = manifest.get("models", {})
-            resolved_models = {
-                name: str(self._resolve_artifact_path(path))
-                for name, path in models.items()
-            }
-            if all(Path(resolved_models.get(name, "")).exists() for name in ("heart", "stroke")):
-                return resolved_models
+        """读取清单并解析模型路径；清单不存在时尝试从已有模型文件引导。"""
+        if not self.manifest_path.exists():
+            bootstrapped = self._bootstrap_from_existing_models()
+            if bootstrapped:
+                return bootstrapped
+            raise FileNotFoundError("未找到模型清单，请先完成训练。")
 
-        raise FileNotFoundError(
-            "未找到当前版本模型清单，请完成阶段一配置确认后再训练模型。"
-        )
+        manifest = json.loads(self.manifest_path.read_text(encoding="utf-8"))
+        if manifest.get("version") != 2:
+            raise FileNotFoundError("模型清单版本过旧，请重新训练。")
+        if self.feature_columns and manifest.get("feature_columns") != self.feature_columns:
+            raise FileNotFoundError("模型清单与当前特征契约不一致，请重新训练。")
+
+        models = manifest.get("models", {})
+        resolved = {
+            name: str(self._resolve_artifact_path(path))
+            for name, path in models.items()
+        }
+        if all(Path(resolved.get(n, "")).exists() for n in ("heart", "stroke")):
+            return resolved
+
+        raise FileNotFoundError("活跃模型文件缺失，请重新训练。")
 
     def register(self, models: dict, metrics: dict) -> dict:
+        """写入模型清单，记录路径、指标和特征契约。"""
         self.model_dir.mkdir(parents=True, exist_ok=True)
         self.manifest_path.parent.mkdir(parents=True, exist_ok=True)
         manifest = {
@@ -64,3 +70,16 @@ class ModelRegistry:
         if not artifact.is_absolute():
             artifact = self.manifest_path.parent / artifact
         return artifact.resolve()
+
+    def _bootstrap_from_existing_models(self) -> dict | None:
+        """清单不存在时，从目录中已有的模型文件自动生成清单。"""
+        heart = sorted(self.model_dir.glob("random_forest_heart_*.joblib"))
+        stroke = sorted(self.model_dir.glob("random_forest_stroke_*.joblib"))
+        if not heart or not stroke:
+            return None
+        models = {
+            "heart": str(heart[-1].resolve()),
+            "stroke": str(stroke[-1].resolve()),
+        }
+        self.register(models, metrics={})
+        return models

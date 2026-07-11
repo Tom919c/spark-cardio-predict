@@ -617,12 +617,24 @@
    <div class="card" style="text-align:center;">
      <div style="font-size:13px;color:#64748B;margin-bottom:4px;">评估结果</div>
      <div class="gauge-wrap">
-       <div id="gaugeChart" style="width:100%;height:240px;"></div>
-     </div>
-   </div>
- 
-   <!-- 3-2：风险等级 + 临床指导 -->
-   <div class="result-grid">
+     <div id="gaugeChart" style="width:100%;height:240px;"></div>
+    </div>
+  </div>
+
+  <!-- 3-2：风险等级 + 临床指导 -->
+  <div class="dual-prob" style="display:flex;gap:12px;flex-wrap:wrap;margin-top:12px;">
+    <div style="flex:1;min-width:120px;text-align:center;padding:12px;border-radius:10px;background:#F8FAFC;border:1px solid #E2E8F0;border-left:3px solid #EF4444;">
+      <div style="font-size:12px;color:#64748B;margin-bottom:2px;">心脏事件风险</div>
+      <div style="font-size:20px;font-weight:700;color:#1E293B;" id="heartProbVal">--</div>
+    </div>
+    <div style="flex:1;min-width:120px;text-align:center;padding:12px;border-radius:10px;background:#F8FAFC;border:1px solid #E2E8F0;border-left:3px solid #8B5CF6;">
+      <div style="font-size:12px;color:#64748B;margin-bottom:2px;">卒中风险</div>
+      <div style="font-size:20px;font-weight:700;color:#1E293B;" id="strokeProbVal">--</div>
+    </div>
+  </div>
+  </div>
+
+  <div class="result-grid">
      <div>
        <div class="risk-level-card" id="riskLevelCard">
          <div class="label">心脑血管疾病风险等级</div>
@@ -636,29 +648,62 @@
            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
            临床复查指导
          </div>
-         <div class="text" id="guideText">--</div>
-       </div>
-     </div>
-   </div>
- 
-   <!-- 3-3：个性化干预建议 -->
-   <div class="card">
+        <div class="text" id="guideText">--</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3-3：个性化干预建议 -->
+  <!-- 3-3A：AI 风险因素分析（SHAP） -->
+  <div class="card shap-section" id="shapSection" style="display:none;">
+    <div class="form-section-title" style="border-bottom-color:#DBEAFE;">
+      <span class="icon basic" style="background:#DBEAFE;color:#2563EB;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 11H5a2 2 0 0 0-2 2v7h18v-7a2 2 0 0 0-2-2h-4"/><rect x="9" y="3" width="6" height="8" rx="1"/></svg>
+      </span>
+      AI 风险因素分析
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+      <div>
+        <div style="font-size:13px;font-weight:600;color:#475569;margin-bottom:4px;">推高风险的因素</div>
+        <div id="positiveShapChart" style="height:220px;"></div>
+      </div>
+      <div>
+        <div style="font-size:13px;font-weight:600;color:#475569;margin-bottom:4px;">降低风险的因素</div>
+        <div id="negativeShapChart" style="height:220px;"></div>
+      </div>
+    </div>
+    <div id="shapUnavailable" style="display:none;text-align:center;padding:16px;color:#94A3B8;font-size:14px;">
+      SHAP 解释暂不可用。安装 shap 库后可查看风险因素分析。
+    </div>
+  </div>
+
+  <div class="card">
      <div class="form-section-title" style="border-bottom-color:#DBEAFE;">
        <span class="icon basic" style="background:#DBEAFE;color:#2563EB;">
          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
        </span>
-       个性化干预建议
-     </div>
-     <div id="suggestionList">
-       <div style="text-align:center;padding:16px;color:#94A3B8;font-size:14px;">完成评估后将为您生成个性化建议</div>
-     </div>
-   </div>
- 
-   <!-- 3-4：重新评估 -->
-   <div style="text-align:center;padding:8px 0 0;">
-     <button onclick="scrollToForm()" style="background:none;border:1.5px solid #CBD5E1;border-radius:10px;padding:10px 28px;font-size:14px;color:#64748B;cursor:pointer;font-family:inherit;">重新填写信息</button>
-   </div>
- 
+      个性化干预建议
+    </div>
+    <div id="suggestionList">
+      <div style="text-align:center;padding:16px;color:#94A3B8;font-size:14px;">完成评估后将为您生成个性化建议</div>
+    </div>
+  </div>
+
+  <!-- 3-4：重新评估 -->
+  <!-- 3-3B：详细报告导航 -->
+  <div class="result-nav" style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:16px;">
+    <a href="{{ url_for('pages.result_report_page') }}" style="display:inline-flex;align-items:center;gap:8px;padding:10px 24px;border-radius:10px;font-size:14px;font-weight:600;text-decoration:none;background:linear-gradient(135deg,#1E40AF,#3B82F6);color:#fff;box-shadow:0 2px 8px rgba(59,130,246,0.25);transition:all 0.2s;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>查看详细报告
+    </a>
+    <a href="{{ url_for('pages.shap_analysis_page') }}" style="display:inline-flex;align-items:center;gap:8px;padding:10px 24px;border-radius:10px;font-size:14px;font-weight:600;text-decoration:none;border:1.5px solid #CBD5E1;color:#475569;background:#F8FAFC;transition:all 0.2s;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 11H5a2 2 0 0 0-2 2v7h18v-7a2 2 0 0 0-2-2h-4"/><rect x="9" y="3" width="6" height="8" rx="1"/></svg>查看完整风险原因分析
+    </a>
+  </div>
+
+  <div style="text-align:center;padding:8px 0 0;">
+    <button onclick="scrollToForm()" style="background:none;border:1.5px solid #CBD5E1;border-radius:10px;padding:10px 28px;font-size:14px;color:#64748B;cursor:pointer;font-family:inherit;">重新填写信息</button>
+  </div>
+
  </div>
  
  </div><!-- /.page-wrap -->
@@ -807,26 +852,14 @@
      const resp = await fetch(API_BASE + '/api/risk/predict', {
        method: 'POST',
        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-       body: JSON.stringify(payload)
-     });
-     if (!resp.ok) throw new Error('HTTP ' + resp.status);
-     const respData = await resp.json();
-     if (!respData.success) throw new Error(respData.message || '预测请求失败');
-     const prediction = respData.data;
-     const level = prediction.risk_level;
-     const result = {
-       risk_prob: prediction.max_probability * 100,
-       risk_level: level.name,
-       level_class: 'level-' + level.code,
-       guide_text: prediction.risk_summary,
-       color: level.color,
-       suggestions: (prediction.intervention_plan.suggestions || []).map(function(desc) {
-         return { type: 'diet', title: '健康管理建议', desc: desc };
-       })
-     };
- 
-     renderResults(result);
-     document.getElementById('resultArea').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      body: JSON.stringify(payload)
+    });
+    const respData = await resp.json();
+    if (!resp.ok || !respData.success) throw new Error(respData.message || ('HTTP ' + resp.status));
+    const prediction = respData.data;
+    sessionStorage.setItem('cardiospark_latest_result', JSON.stringify(prediction));
+    renderResults(prediction);
+    document.getElementById('resultArea').scrollIntoView({ behavior: 'smooth', block: 'start' });
  
    } catch (err) {
      console.error('[评估] 错误：', err);
@@ -839,44 +872,84 @@
  });
  
  /* ===========================================================================
-  *  模块D：结果渲染
-  * =========================================================================== */
- 
- function renderResults(result) {
-   const area = document.getElementById('resultArea');
-   area.classList.remove('visible');
-   void area.offsetWidth;
-   area.classList.add('visible');
-   area.style.display = 'block';
- 
-   const card = document.getElementById('riskLevelCard');
-   card.className = 'risk-level-card ' + (result.level_class || '');
-   document.getElementById('riskLevelDisplay').textContent = result.risk_level;
-   document.getElementById('riskProbDisplay').textContent = '发病概率：' + result.risk_prob.toFixed(1) + '%';
-   document.getElementById('guideText').textContent = result.guide_text;
- 
-   const list = document.getElementById('suggestionList');
-   if (result.suggestions && result.suggestions.length > 0) {
-     const iconMap = {
-       goal: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>',
-       diet: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>',
-       med: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>',
-       warn: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
-       activity: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>'
-     };
-     list.innerHTML = result.suggestions.map(s => {
-       const svg = iconMap[s.type] || iconMap.goal;
-       return '<div class="suggestion-item">' +
-         '<div class="icon ' + s.type + '">' + svg + '</div>' +
-         '<div class="content"><div class="title">' + s.title + '</div><div class="desc">' + s.desc + '</div></div>' +
-       '</div>';
-     }).join('');
-   }
- 
-   renderGauge(result.risk_prob, result.color);
- }
- 
- /* ===========================================================================
+ *  模块D：结果渲染
+ * =========================================================================== */
+
+var positiveShap = null;
+var negativeShap = null;
+var FEATURE_LABELS = {
+  age: '年龄', gender: '性别', bmi: 'BMI', cholesterol: '胆固醇',
+  diabetes: '糖尿病', hypertension: '高血压', smoker: '吸烟', alcohol: '饮酒', exercise: '运动'
+};
+
+function renderResults(prediction) {
+  const area = document.getElementById('resultArea');
+  area.classList.remove('visible');
+  void area.offsetWidth;
+  area.classList.add('visible');
+  area.style.display = 'block';
+
+  const level = prediction.risk_level;
+  const card = document.getElementById('riskLevelCard');
+  card.className = 'risk-level-card level-' + level.code;
+  document.getElementById('riskLevelDisplay').textContent = level.name;
+  const heartProb = prediction.heart_predicted_probability || 0;
+  const strokeProb = prediction.stroke_predicted_probability || 0;
+  const maxProb = Math.max(heartProb, strokeProb);
+  document.getElementById('riskProbDisplay').textContent = '综合发病概率：' + (maxProb * 100).toFixed(1) + '%';
+  document.getElementById('guideText').textContent = prediction.risk_summary || '--';
+  document.getElementById('heartProbVal').textContent = (heartProb * 100).toFixed(1) + '%';
+  document.getElementById('strokeProbVal').textContent = (strokeProb * 100).toFixed(1) + '%';
+
+  var shapSummary = prediction.combined_shap_summary || {};
+  var shapSection = document.getElementById('shapSection');
+  if (shapSummary.available) {
+    shapSection.style.display = 'block';
+    document.getElementById('shapUnavailable').style.display = 'none';
+    renderShapChart('positiveShapChart', shapSummary.top_positive_factors || [], '#ffb0c0', '#ff7a92');
+    renderShapChart('negativeShapChart', shapSummary.top_negative_factors || [], '#9af0c3', '#58d99a');
+  } else {
+    shapSection.style.display = 'block';
+    document.getElementById('shapUnavailable').style.display = 'block';
+  }
+
+  const list = document.getElementById('suggestionList');
+  const suggestions = (prediction.intervention_plan && prediction.intervention_plan.suggestions) || [];
+  if (suggestions.length > 0) {
+    list.innerHTML = suggestions.map(function(desc) {
+      return '<div class="suggestion-item">' +
+        '<div class="icon goal"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>' +
+        '<div class="content"><div class="title">健康管理建议</div><div class="desc">' + desc + '</div></div>' +
+      '</div>';
+    }).join('');
+  }
+
+  renderGauge(maxProb * 100, level.color);
+}
+
+function renderShapChart(domId, items, colorStart, colorEnd) {
+  const dom = document.getElementById(domId);
+  if (domId === 'positiveShapChart' && positiveShap) positiveShap.dispose();
+  if (domId === 'negativeShapChart' && negativeShap) negativeShap.dispose();
+  const chart = echarts.init(dom);
+  if (!items || !items.length) {
+    chart.setOption({ title: { text: '暂无显著因素', left: 'center', top: 'center', textStyle: { color: '#94A3B8', fontSize: 13 } } });
+    if (domId === 'positiveShapChart') positiveShap = chart; else negativeShap = chart;
+    return;
+  }
+  const labels = items.map(function(item) { return FEATURE_LABELS[item.feature] || item.feature; });
+  const values = items.map(function(item) { return Number(item.impact_percent || 0); });
+  chart.setOption({
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, formatter: function(params) { var item = items[params[0].dataIndex]; return (FEATURE_LABELS[item.feature] || item.feature) + '<br/>影响强度：' + Number(item.impact_percent || 0).toFixed(2) + '%'; } },
+    grid: { top: 10, left: 8, right: 30, bottom: 6, containLabel: true },
+    xAxis: { type: 'value', axisLabel: { color: '#94A3B8', formatter: '{value}%' }, splitLine: { lineStyle: { color: 'rgba(0,0,0,0.04)' } }, axisLine: { show: false }, axisTick: { show: false } },
+    yAxis: { type: 'category', data: labels, axisLabel: { color: '#475569', fontWeight: 600 }, axisLine: { show: false }, axisTick: { show: false } },
+    series: [{ type: 'bar', data: values, barWidth: 16, showBackground: true, backgroundStyle: { color: 'rgba(0,0,0,0.03)', borderRadius: 999 }, itemStyle: { borderRadius: 999, color: { type: 'linear', x: 0, y: 0, x2: 1, y2: 0, colorStops: [{ offset: 0, color: colorStart }, { offset: 1, color: colorEnd }] } }, label: { show: true, position: 'right', color: '#475569', fontWeight: 700, formatter: '{c}%' } }]
+  });
+  if (domId === 'positiveShapChart') positiveShap = chart; else negativeShap = chart;
+}
+
+/* ===========================================================================
   *  模块E：ECharts 仪表盘
   * =========================================================================== */
  function renderGauge(targetValue, color) {
@@ -937,11 +1010,13 @@
      gaugeInstance.setOption({
        series: [{ data: [{ value: current }] }]
      });
-   }, 25);
-   window.addEventListener('resize', function() {
-     if (gaugeInstance) gaugeInstance.resize();
-   });
- }
+  }, 25);
+  window.addEventListener('resize', function() {
+    if (gaugeInstance) gaugeInstance.resize();
+    if (positiveShap) positiveShap.resize();
+    if (negativeShap) negativeShap.resize();
+  });
+}
  
  /* ===========================================================================
   *  模块F：工具函数

@@ -1,10 +1,9 @@
-"""Institutional dashboard APIs backed by the Chengdu simulated population."""
+"""群体分析控制器：大屏聚合统计和高危随访名单接口。"""
 
 from flask import Blueprint, current_app, request
 
 from src.services.population_service import PopulationService
 from src.utils.response import error_response, success_response
-
 
 analysis_bp = Blueprint("analysis", __name__)
 
