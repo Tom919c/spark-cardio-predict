@@ -10,20 +10,6 @@
 - C 端：个人双风险概率、五级评估与干预建议。
 
 ## 运行
-
-Windows 本地演示和测试使用 Conda 环境 `bigdata`。先确认数据已放入 `data/`，再执行：
-
-```powershell
-conda run -n bigdata pytest -q
-conda run -n bigdata python app.py
-```
-
-打开 `http://127.0.0.1:5000/dashboard`，可在顶部切换机构端和个人风险评估。正式训练前先完成测试和接口验收，训练时执行：
-
-```powershell
-Invoke-RestMethod http://127.0.0.1:5000/api/risk/train?run_label=phase1
-```
-
 将 `.env.example` 复制为 `.env` 后按本机环境调整。数据、模型和 `mydocs` 均不进入 Git。没有仿真数据时，使用以下命令生成默认 200 万条记录：
 
 ```powershell
