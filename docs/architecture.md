@@ -13,4 +13,4 @@ ODS 原始数据 -> DWD 标准双标签表 -> DWS 成都市仿真人口 -> ADS �
 - `src/services/`：数据、风险、群体分析业务服务。
 - `src/spark_jobs/`：ETL、DWS、群体聚合和高危筛查作业。
 
-阶段一原型默认采用本地模式：Windows 使用 Conda `bigdata` 启动 Flask，直接读取 `data/dwd/` 和 `data/dws/`。WSL2 或 VMware Linux 只负责执行 Hadoop/Spark 伪分布式链路；作业顺序为 ETL -> 特征插补 -> 群体聚合/重点筛查，所有 HDFS 参数通过 `.env` 配置。
+阶段一原型默认采用本地模式：Windows 使用成员自行配置的 Conda 环境启动 Flask，直接读取 `data/dwd/` 和 `data/dws/`。WSL2 或 VMware Linux 只负责执行 Hadoop/Spark 伪分布式链路；作业顺序为 ETL -> 特征插补 -> 群体聚合/重点筛查，所有 HDFS 参数通过 `.env` 配置。

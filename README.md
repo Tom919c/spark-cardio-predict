@@ -10,10 +10,16 @@
 - C 端：个人双风险概率、五级评估与干预建议。
 
 ## 运行
-将 `.env.example` 复制为 `.env` 后按本机环境调整。数据、模型和 `mydocs` 均不进入 Git。没有仿真数据时，使用以下命令生成默认 200 万条记录：
+Windows 或 Linux 环境先激活本机用于项目的 Conda 环境，环境名称由各成员自行决定：
 
 ```powershell
-conda run -n bigdata python scripts/generate_chengdu_health_data.py
+conda activate <your-conda-environment>
+```
+
+然后在已激活的环境中执行项目命令。将 `.env.example` 复制为 `.env` 后按本机环境调整。数据、模型和 `mydocs` 均不进入 Git。没有仿真数据时，使用以下命令生成默认 200 万条记录：
+
+```powershell
+python scripts/generate_chengdu_health_data.py
 ```
 
 ## 跨环境

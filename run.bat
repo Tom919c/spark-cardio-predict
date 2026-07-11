@@ -2,4 +2,4 @@
 setlocal
 
 cd /d "%~dp0"
-call conda run -n bigdata python app.py
+python app.py

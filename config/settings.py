@@ -86,17 +86,23 @@ class BaseConfig:
     # 仅在 WSL2/VMware Linux 使用 DATA_MODE=hdfs 时读取以下伪分布式参数。
     HDFS_NAMENODE_URI = os.getenv("HDFS_NAMENODE_URI", "hdfs://localhost:9000")
     HDFS_WEB_URL = os.getenv("HDFS_WEB_URL", "http://localhost:9870")
-    HDFS_USER = os.getenv("HDFS_USER", "chenquan")
-    HDFS_RAW_PATH = os.getenv("HDFS_RAW_PATH", "/user/chenquan/cardio/raw")
+    # 默认使用当前系统用户，团队成员可在 .env 中显式覆盖为 Hadoop 用户名。
+    HDFS_USER = (
+        os.getenv("HDFS_USER")
+        or os.getenv("USER")
+        or os.getenv("USERNAME")
+        or "cardiospark"
+    )
+    HDFS_RAW_PATH = os.getenv("HDFS_RAW_PATH", f"/user/{HDFS_USER}/cardiospark/raw")
     HDFS_INPUT_PATH = os.getenv(
         "HDFS_INPUT_PATH",
-        "/user/chenquan/cardio/raw/chengdu_resident_health_simulated.csv",
+        f"{HDFS_RAW_PATH}/chengdu_resident_health_simulated.csv",
     )
     HDFS_STAGING_PATH = os.getenv(
-        "HDFS_STAGING_PATH", "/user/chenquan/cardio/staging"
+        "HDFS_STAGING_PATH", f"/user/{HDFS_USER}/cardiospark/staging"
     )
     HDFS_FEATURE_PATH = os.getenv(
-        "HDFS_FEATURE_PATH", "/user/chenquan/cardio/feature"
+        "HDFS_FEATURE_PATH", f"/user/{HDFS_USER}/cardiospark/feature"
     )
     SPARK_SUBMIT_BIN = os.getenv("SPARK_SUBMIT_BIN", "spark-submit")
 

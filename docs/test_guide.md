@@ -3,9 +3,12 @@
 在 Windows 环境执行：
 
 ```powershell
-conda run -n bigdata pytest -q
-conda run -n bigdata python app.py
+conda activate <your-conda-environment>
+python -m pytest -q
+python app.py
 ```
+
+`<your-conda-environment>` 替换为本机实际环境名，不要求所有成员使用同名环境。
 
 基础验收检查：
 
