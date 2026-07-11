@@ -1,1 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CardioSpark 平台总览</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      background:
+        radial-gradient(circle at top left, rgba(37, 99, 235, 0.18), transparent 28%),
+        radial-gradient(circle at top right, rgba(14, 165, 233, 0.12), transparent 24%),
+        linear-gradient(180deg, #081225 0%, #0f172a 100%);
+      color: #e2e8f0;
+      font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+      min-height: 100vh;
+    }
+    .panel {
+      background: rgba(15, 23, 42, 0.76);
+      border: 1px solid rgba(96, 165, 250, 0.18);
+      box-shadow: 0 20px 60px rgba(2, 6, 23, 0.28);
+      backdrop-filter: blur(10px);
+    }
+    .metric-card {
+      background: linear-gradient(135deg, rgba(30, 41, 59, 0.94), rgba(15, 23, 42, 0.98));
+      border: 1px solid rgba(59, 130, 246, 0.16);
+    }
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 12px;
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      background: rgba(30, 41, 59, 0.75);
+      color: #cbd5e1;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #2563eb, #0ea5e9);
+    }
+  </style>
+</head>
+<body>
+  <div class="max-w-7xl mx-auto px-4 py-6 md:px-6 md:py-8">
+    <header class="panel rounded-3xl p-6 md:p-8 mb-6">
+      <div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <div class="tag mb-4">CardioSpark / B端管理视图</div>
+          <h1 class="text-3xl md:text-4xl font-bold tracking-wide">心脑血管双模型预测平台</h1>
+          <p class="mt-3 text-slate-300 max-w-3xl leading-7">
+            这个页面已经按你当前项目阶段做了适配：重点展示数据集配置、双模型训练能力、预测入口和模型文件路径，
+            不再依赖你同伴还没并进来的群体画像与地图分析接口。
+          </p>
+        </div>
+        <div class="flex flex-wrap gap-3">
+          <a href="{{ url_for('pages.risk_report_page') }}" class="btn-primary text-white font-semibold rounded-2xl px-5 py-3">进入 C 端预测页</a>
+          <a href="{{ url_for('health.health_check') }}" class="rounded-2xl px-5 py-3 border border-slate-700 text-slate-200">健康检查</a>
+        </div>
+      </div>
+    </header>
 
+    <section class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+      <div class="metric-card rounded-2xl p-5">
+        <div class="text-slate-400 text-sm">平台状态</div>
+        <div class="mt-2 text-2xl font-bold" id="statusValue">加载中</div>
+        <div class="mt-1 text-sm text-slate-500">来自 `/api/risk/summary`</div>
+      </div>
+      <div class="metric-card rounded-2xl p-5">
+        <div class="text-slate-400 text-sm">默认模型</div>
+        <div class="mt-2 text-2xl font-bold" id="defaultModelValue">--</div>
+        <div class="mt-1 text-sm text-slate-500">当前训练入口默认使用的模型名</div>
+      </div>
+      <div class="metric-card rounded-2xl p-5">
+        <div class="text-slate-400 text-sm">训练轮数</div>
+        <div class="mt-2 text-2xl font-bold" id="roundsValue">--</div>
+        <div class="mt-1 text-sm text-slate-500">多轮训练是否开启：<span id="multiRunValue">--</span></div>
+      </div>
+      <div class="metric-card rounded-2xl p-5">
+        <div class="text-slate-400 text-sm">数据集状态</div>
+        <div class="mt-2 text-2xl font-bold" id="datasetValue">加载中</div>
+        <div class="mt-1 text-sm text-slate-500" id="datasetPathText">--</div>
+      </div>
+    </section>
+
+    <section class="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-6">
+      <article class="panel rounded-3xl p-6 xl:col-span-1">
+        <h2 class="text-xl font-semibold mb-4">项目能力</h2>
+        <div id="capabilitiesList" class="space-y-3 text-slate-300"></div>
+      </article>
+
+      <article class="panel rounded-3xl p-6 xl:col-span-2">
+        <div class="flex items-center justify-between gap-3 mb-4">
+          <h2 class="text-xl font-semibold">当前配置</h2>
+          <span class="tag" id="profileConfiguredTag">读取中</span>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+          <div class="rounded-2xl bg-slate-900/55 p-4">
+            <div class="text-slate-400 mb-2">数据文件</div>
+            <div class="break-all text-slate-100" id="datasetPathValue">--</div>
+          </div>
+          <div class="rounded-2xl bg-slate-900/55 p-4">
+            <div class="text-slate-400 mb-2">特征字段</div>
+            <div class="text-slate-100 leading-7" id="featureColumnsValue">--</div>
+          </div>
+          <div class="rounded-2xl bg-slate-900/55 p-4">
+            <div class="text-slate-400 mb-2">分布式模式</div>
+            <div class="text-slate-100" id="distributedValue">--</div>
+          </div>
+          <div class="rounded-2xl bg-slate-900/55 p-4">
+            <div class="text-slate-400 mb-2">目标字段</div>
+            <div class="text-slate-100" id="targetColumnValue">--</div>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+      <article class="panel rounded-3xl p-6">
+        <h2 class="text-xl font-semibold mb-4">模型文件说明</h2>
+        <div class="space-y-4 text-sm text-slate-300 leading-7">
+          <p>你现在的双模型预测接口 `/api/risk/predict` 需要两个模型文件路径：</p>
+          <div class="rounded-2xl bg-slate-900/55 p-4">
+            <div class="text-slate-400">心脏风险模型</div>
+            <div class="text-slate-100 break-all">{{ model_output_dir }}/...heart...joblib</div>
+          </div>
+          <div class="rounded-2xl bg-slate-900/55 p-4">
+            <div class="text-slate-400">卒中风险模型</div>
+            <div class="text-slate-100 break-all">{{ model_output_dir }}/...stroke...joblib</div>
+          </div>
+          <p>建议先通过训练接口生成模型，再把最佳轮次输出的两个 `.joblib` 路径填到 C 端页面中。</p>
+        </div>
+      </article>
+
+      <article class="panel rounded-3xl p-6">
+        <h2 class="text-xl font-semibold mb-4">下一步接入建议</h2>
+        <div class="space-y-3 text-sm text-slate-300 leading-7">
+          <div class="rounded-2xl bg-slate-900/55 p-4">1. 先在这个项目里完成双模型训练，拿到 `heart` 和 `stroke` 两个模型路径。</div>
+          <div class="rounded-2xl bg-slate-900/55 p-4">2. 用 C 端页面验证个人预测流程是否跑通，确认返回的风险摘要、联合分类和建议都能展示。</div>
+          <div class="rounded-2xl bg-slate-900/55 p-4">3. 等同伴的群体预测接口合并后，再把原来 B 端大屏里的地图、人群分层、词云这些模块逐步接回去。</div>
+        </div>
+      </article>
+    </section>
+  </div>
+
+  <script>
+    async function fetchWrappedJson(url) {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error("HTTP " + response.status);
+      }
+      return response.json();
+    }
+
+    function setText(id, value) {
+      document.getElementById(id).textContent = value;
+    }
+
+    function renderSummary(data) {
+      setText("statusValue", data.status || "--");
+      setText("defaultModelValue", data.default_model_name || "--");
+      setText("roundsValue", data.default_training_rounds ?? "--");
+      setText("multiRunValue", data.multi_run_training ? "已开启" : "未开启");
+
+      const capabilities = data.core_capabilities || [];
+      const container = document.getElementById("capabilitiesList");
+      container.innerHTML = capabilities.map(function(item, index) {
+        return '<div class="rounded-2xl bg-slate-900/55 p-4"><div class="text-sky-300 text-xs mb-1">能力 ' +
+          String(index + 1).padStart(2, "0") +
+          '</div><div>' + item + '</div></div>';
+      }).join("");
+    }
+
+    function renderProfile(data) {
+      const configured = data.configured && data.exists;
+      setText("datasetValue", configured ? "已就绪" : "未就绪");
+      setText("datasetPathText", data.dataset_file_path || "未配置");
+      setText("datasetPathValue", data.dataset_file_path || "未配置");
+      setText("featureColumnsValue", (data.feature_columns || []).join(" / ") || "--");
+      setText("distributedValue", data.distributed_mode_enabled ? "开启" : "关闭");
+      setText("targetColumnValue", data.target_column || "--");
+      document.getElementById("profileConfiguredTag").textContent = configured ? "数据可用" : "数据未准备";
+    }
+
+    async function initPage() {
+      try {
+        const summaryResp = await fetchWrappedJson("/api/risk/summary");
+        const profileResp = await fetchWrappedJson("/api/data/profile");
+        if (summaryResp.success) renderSummary(summaryResp.data || {});
+        if (profileResp.success) renderProfile(profileResp.data || {});
+      } catch (error) {
+        setText("statusValue", "加载失败");
+        setText("datasetValue", "加载失败");
+        console.error(error);
+      }
+    }
+
+    initPage();
+  </script>
+</body>
+</html>

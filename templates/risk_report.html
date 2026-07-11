@@ -1,1 +1,361 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CardioSpark 个人双模型预测</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <style>
+    body {
+      font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+      background:
+        radial-gradient(circle at top right, rgba(56, 189, 248, 0.16), transparent 24%),
+        linear-gradient(180deg, #eef6ff 0%, #f8fafc 100%);
+      color: #0f172a;
+      min-height: 100vh;
+    }
+    .glass-card {
+      background: rgba(255, 255, 255, 0.88);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      box-shadow: 0 18px 48px rgba(15, 23, 42, 0.08);
+      backdrop-filter: blur(10px);
+    }
+    .input-shell {
+      border: 1px solid #cbd5e1;
+      background: #f8fafc;
+      transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+    }
+    .input-shell:focus {
+      outline: none;
+      border-color: #2563eb;
+      background: #ffffff;
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+    }
+    .pill {
+      display: inline-flex;
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .risk-0 { background: #dcfce7; color: #166534; }
+    .risk-1 { background: #dbeafe; color: #1d4ed8; }
+    .risk-2 { background: #fde68a; color: #92400e; }
+    .risk-3 { background: #fee2e2; color: #b91c1c; }
+  </style>
+</head>
+<body>
+  <div class="max-w-6xl mx-auto px-4 py-6 md:px-6 md:py-8">
+    <header class="glass-card rounded-[28px] p-6 md:p-8 mb-6">
+      <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+        <div>
+          <div class="inline-flex rounded-full bg-blue-100 text-blue-700 px-3 py-1 text-xs font-semibold mb-4">C端个人评估页 / 已适配双模型接口</div>
+          <h1 class="text-3xl md:text-4xl font-bold tracking-wide">心脑血管风险双模型预测</h1>
+          <p class="mt-3 text-slate-600 max-w-3xl leading-7">
+            这个页面已经按你项目当前的后端要求重构。现在提交的是模型真正需要的标准化特征，
+            并直接调用 `/api/risk/predict`，返回联合风险分类、心脏/卒中概率、摘要和干预建议。
+          </p>
+        </div>
+        <a href="{{ url_for('pages.dashboard_page') }}" class="inline-flex rounded-2xl border border-slate-300 px-5 py-3 text-slate-700 font-semibold">返回 B 端总览</a>
+      </div>
+    </header>
 
+    <div class="grid grid-cols-1 xl:grid-cols-5 gap-5">
+      <section class="xl:col-span-3 glass-card rounded-[28px] p-6 md:p-8">
+        <h2 class="text-2xl font-bold mb-5">填写预测信息</h2>
+        <form id="predictForm" class="space-y-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-semibold text-slate-700 mb-2">心脏模型路径</label>
+              <input id="heartModelPath" class="input-shell w-full rounded-2xl px-4 py-3" value="{{ default_heart_model_path }}" placeholder="例如：data/feature/models/xxx_heart_xxx.joblib" required>
+            </div>
+            <div>
+              <label class="block text-sm font-semibold text-slate-700 mb-2">卒中模型路径</label>
+              <input id="strokeModelPath" class="input-shell w-full rounded-2xl px-4 py-3" value="{{ default_stroke_model_path }}" placeholder="例如：data/feature/models/xxx_stroke_xxx.joblib" required>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-semibold text-slate-700 mb-2">年龄</label>
+              <input id="age" type="number" min="1" max="120" class="input-shell w-full rounded-2xl px-4 py-3" value="55" required>
+            </div>
+            <div>
+              <label class="block text-sm font-semibold text-slate-700 mb-2">性别</label>
+              <select id="gender" class="input-shell w-full rounded-2xl px-4 py-3">
+                <option value="0">女</option>
+                <option value="1">男</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-semibold text-slate-700 mb-2">BMI</label>
+              <input id="bmi" type="number" min="10" max="60" step="0.1" class="input-shell w-full rounded-2xl px-4 py-3" value="24.5" required>
+            </div>
+            <div>
+              <label class="block text-sm font-semibold text-slate-700 mb-2">胆固醇等级</label>
+              <select id="cholesterol" class="input-shell w-full rounded-2xl px-4 py-3">
+                <option value="1">1 正常</option>
+                <option value="2">2 偏高</option>
+                <option value="3">3 明显升高</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-semibold text-slate-700 mb-2">高血压</label>
+              <select id="hypertension" class="input-shell w-full rounded-2xl px-4 py-3">
+                <option value="0">否</option>
+                <option value="1">是</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-semibold text-slate-700 mb-2">糖尿病</label>
+              <select id="diabetes" class="input-shell w-full rounded-2xl px-4 py-3">
+                <option value="0">否</option>
+                <option value="1">是</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-semibold text-slate-700 mb-2">吸烟状态</label>
+              <select id="smoker" class="input-shell w-full rounded-2xl px-4 py-3">
+                <option value="0">从不吸烟</option>
+                <option value="1">曾经吸烟</option>
+                <option value="2">当前吸烟</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-semibold text-slate-700 mb-2">饮酒</label>
+              <select id="alcohol" class="input-shell w-full rounded-2xl px-4 py-3">
+                <option value="0">否</option>
+                <option value="1">是</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-semibold text-slate-700 mb-2">规律运动</label>
+              <select id="exercise" class="input-shell w-full rounded-2xl px-4 py-3">
+                <option value="1">是</option>
+                <option value="0">否</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="rounded-[24px] bg-slate-50 border border-slate-200 p-4 text-sm text-slate-600 leading-7">
+            当前模型要求的字段是：`age / gender / bmi / cholesterol / diabetes / hypertension / smoker / alcohol / exercise`。
+            所以这里已经把原来的演示型表单改成了项目真实可提交的格式。
+          </div>
+
+          <button id="submitBtn" type="submit" class="w-full md:w-auto rounded-2xl px-8 py-4 text-white font-bold bg-gradient-to-r from-blue-600 to-cyan-500">
+            开始双模型预测
+          </button>
+        </form>
+      </section>
+
+      <aside class="xl:col-span-2 space-y-5">
+        <section class="glass-card rounded-[28px] p-6">
+          <h2 class="text-xl font-bold mb-4">预测结果</h2>
+          <div id="emptyState" class="text-slate-500 leading-7">提交后，这里会显示联合分类、双模型概率、风险摘要和干预建议。</div>
+          <div id="resultArea" class="hidden space-y-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div class="rounded-2xl bg-slate-900 text-white p-4">
+                <div class="text-slate-400 text-sm">联合分类</div>
+                <div class="mt-2 text-xl font-bold" id="finalCategoryText">--</div>
+                <div class="mt-2"><span id="riskLevelBadge" class="pill risk-0">--</span></div>
+              </div>
+              <div class="rounded-2xl bg-white border border-slate-200 p-4">
+                <div class="text-slate-500 text-sm">风险摘要</div>
+                <div class="mt-2 font-semibold leading-7" id="riskSummaryText">--</div>
+              </div>
+            </div>
+            <div class="glass-card rounded-[24px] p-4 bg-white">
+              <div id="gaugeChart" style="height: 260px;"></div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div class="rounded-2xl bg-white border border-slate-200 p-4">
+                <div class="text-slate-500 text-sm">心脏风险概率</div>
+                <div class="mt-2 text-2xl font-bold text-rose-600" id="heartProbText">--</div>
+              </div>
+              <div class="rounded-2xl bg-white border border-slate-200 p-4">
+                <div class="text-slate-500 text-sm">卒中风险概率</div>
+                <div class="mt-2 text-2xl font-bold text-sky-600" id="strokeProbText">--</div>
+              </div>
+            </div>
+            <div class="rounded-2xl bg-white border border-slate-200 p-4">
+              <div class="text-slate-500 text-sm mb-3">关键提示</div>
+              <div id="highlightsList" class="space-y-2 text-sm text-slate-700"></div>
+            </div>
+            <div class="rounded-2xl bg-white border border-slate-200 p-4">
+              <div class="text-slate-500 text-sm mb-3">干预建议</div>
+              <div id="suggestionsList" class="space-y-2 text-sm text-slate-700"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="glass-card rounded-[28px] p-6">
+          <h2 class="text-xl font-bold mb-4">接口返回映射</h2>
+          <div class="space-y-3 text-sm text-slate-600 leading-7">
+            <div class="rounded-2xl bg-slate-50 p-4 border border-slate-200">`final_category`：0 无明显风险，1 偏心脏，2 偏卒中，3 双高风险。</div>
+            <div class="rounded-2xl bg-slate-50 p-4 border border-slate-200">`heart_predicted_probability` 和 `stroke_predicted_probability` 会被转换成百分比展示。</div>
+            <div class="rounded-2xl bg-slate-50 p-4 border border-slate-200">`intervention_plan.suggestions` 和 `key_highlights` 会直接渲染，不再使用原页面的 mock 文案。</div>
+          </div>
+        </section>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    const categoryLabelMap = {
+      0: "0 类 / 暂无明显联合风险",
+      1: "1 类 / 心脏风险偏高",
+      2: "2 类 / 卒中风险偏高",
+      3: "3 类 / 心脑双高风险"
+    };
+
+    const badgeClassMap = {
+      0: "pill risk-0",
+      1: "pill risk-1",
+      2: "pill risk-2",
+      3: "pill risk-3"
+    };
+
+    let gaugeChart = null;
+
+    function toNumber(value) {
+      return Number(value);
+    }
+
+    function safePercent(value) {
+      if (value === null || value === undefined) {
+        return "--";
+      }
+      return (Number(value) * 100).toFixed(2) + "%";
+    }
+
+    function listHtml(items) {
+      return (items || []).map(function(item) {
+        return '<div class="rounded-xl bg-slate-50 border border-slate-200 px-3 py-2">' + item + "</div>";
+      }).join("");
+    }
+
+    function renderGauge(heartPercent, strokePercent) {
+      const target = Math.max(heartPercent || 0, strokePercent || 0);
+      const dom = document.getElementById("gaugeChart");
+      if (!gaugeChart) {
+        gaugeChart = echarts.init(dom);
+        window.addEventListener("resize", function() {
+          if (gaugeChart) gaugeChart.resize();
+        });
+      }
+
+      gaugeChart.setOption({
+        series: [{
+          type: "gauge",
+          startAngle: 210,
+          endAngle: -30,
+          center: ["50%", "58%"],
+          radius: "92%",
+          min: 0,
+          max: 100,
+          axisLine: {
+            lineStyle: {
+              width: 16,
+              color: [
+                [0.5, "#22c55e"],
+                [0.75, "#f59e0b"],
+                [1, "#ef4444"]
+              ]
+            }
+          },
+          progress: {
+            show: true,
+            width: 16,
+            itemStyle: { color: "#2563eb" }
+          },
+          pointer: { show: false },
+          axisTick: { show: false },
+          splitLine: { show: false },
+          axisLabel: { distance: -40, color: "#64748b", fontSize: 12 },
+          title: { show: true, offsetCenter: [0, "40%"], color: "#64748b", fontSize: 14 },
+          detail: {
+            valueAnimation: true,
+            formatter: function(value) { return value.toFixed(1) + "%"; },
+            color: "#0f172a",
+            fontSize: 28,
+            fontWeight: "bold",
+            offsetCenter: [0, "8%"]
+          },
+          data: [{ value: target, name: "联合风险强度" }]
+        }]
+      });
+    }
+
+    function renderResult(data) {
+      document.getElementById("emptyState").classList.add("hidden");
+      document.getElementById("resultArea").classList.remove("hidden");
+
+      const category = data.final_category ?? 0;
+      document.getElementById("finalCategoryText").textContent = categoryLabelMap[category] || "未知分类";
+      document.getElementById("riskSummaryText").textContent = data.risk_summary || "--";
+
+      const badge = document.getElementById("riskLevelBadge");
+      badge.className = badgeClassMap[category] || "pill risk-0";
+      badge.textContent = "risk_level = " + String(data.risk_level ?? category);
+
+      document.getElementById("heartProbText").textContent = data.heart_probability_percent != null
+        ? Number(data.heart_probability_percent).toFixed(2) + "%"
+        : safePercent(data.heart_predicted_probability);
+      document.getElementById("strokeProbText").textContent = data.stroke_probability_percent != null
+        ? Number(data.stroke_probability_percent).toFixed(2) + "%"
+        : safePercent(data.stroke_predicted_probability);
+
+      document.getElementById("highlightsList").innerHTML = listHtml(data.key_highlights || ["暂无补充提示"]);
+      document.getElementById("suggestionsList").innerHTML = listHtml((data.intervention_plan || {}).suggestions || ["暂无建议"]);
+
+      renderGauge(data.heart_probability_percent, data.stroke_probability_percent);
+    }
+
+    document.getElementById("predictForm").addEventListener("submit", async function(event) {
+      event.preventDefault();
+
+      const submitBtn = document.getElementById("submitBtn");
+      submitBtn.disabled = true;
+      submitBtn.textContent = "预测中...";
+
+      const payload = {
+        heart_model_path: document.getElementById("heartModelPath").value.trim(),
+        stroke_model_path: document.getElementById("strokeModelPath").value.trim(),
+        age: toNumber(document.getElementById("age").value),
+        gender: toNumber(document.getElementById("gender").value),
+        bmi: toNumber(document.getElementById("bmi").value),
+        cholesterol: toNumber(document.getElementById("cholesterol").value),
+        diabetes: toNumber(document.getElementById("diabetes").value),
+        hypertension: toNumber(document.getElementById("hypertension").value),
+        smoker: toNumber(document.getElementById("smoker").value),
+        alcohol: toNumber(document.getElementById("alcohol").value),
+        exercise: toNumber(document.getElementById("exercise").value)
+      };
+
+      try {
+        const response = await fetch("/api/risk/predict", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+        if (!response.ok || !result.success) {
+          throw new Error(result.message || ("HTTP " + response.status));
+        }
+        renderResult(result.data || {});
+      } catch (error) {
+        alert("预测失败：" + error.message);
+        console.error(error);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "开始双模型预测";
+      }
+    });
+  </script>
+</body>
+</html>
