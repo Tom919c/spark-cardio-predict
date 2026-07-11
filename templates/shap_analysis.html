@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CardioSpark AI 可解释性分析</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root {
+      --bg-1: #f4f8ff;
+      --bg-2: #edf5ff;
+      --line: rgba(104, 147, 214, 0.14);
+      --text: #10203d;
+      --muted: #6981a7;
+      --blue: #5b8cff;
+      --cyan: #66dfff;
+      --lime: #89f0be;
+      --amber: #ffc974;
+      --rose: #ff8aa2;
+      --glow: 0 24px 90px rgba(77, 118, 190, 0.12);
+      --card: rgba(255, 255, 255, 0.68);
+      --card-strong: rgba(255, 255, 255, 0.84);
+      --dark-card: linear-gradient(160deg, #122446 0%, #1d3561 100%);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background:
+        radial-gradient(circle at 12% 14%, rgba(91,140,255,0.18), transparent 22%),
+        radial-gradient(circle at 88% 10%, rgba(102,223,255,0.20), transparent 20%),
+        radial-gradient(circle at 50% 100%, rgba(189,231,255,0.35), transparent 24%),
+        linear-gradient(180deg, var(--bg-1) 0%, var(--bg-2) 42%, #f9fbff 100%);
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    body::before,
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    body::before {
+      background:
+        linear-gradient(rgba(129, 170, 232, 0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(129, 170, 232, 0.06) 1px, transparent 1px);
+      background-size: 40px 40px;
+      mask-image: linear-gradient(to bottom, rgba(0,0,0,0.55), rgba(0,0,0,0.06));
+    }
+
+    body::after {
+      background: radial-gradient(circle at center, transparent 0%, rgba(233,241,255,0.76) 100%);
+    }
+
+    .orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(24px);
+      opacity: 0.55;
+      pointer-events: none;
+      z-index: 0;
+      animation: floatOrb 12s ease-in-out infinite;
+    }
+
+    .orb-a {
+      width: 240px;
+      height: 240px;
+      top: 90px;
+      right: 6%;
+      background: rgba(102,223,255,0.24);
+    }
+
+    .orb-b {
+      width: 300px;
+      height: 300px;
+      bottom: 10px;
+      left: 0;
+      background: rgba(91,140,255,0.18);
+      animation-delay: -5s;
+    }
+
+    @keyframes floatOrb {
+      0%, 100% { transform: translateY(0) translateX(0) scale(1); }
+      50% { transform: translateY(-18px) translateX(12px) scale(1.04); }
+    }
+
+    @keyframes riseIn {
+      from { opacity: 0; transform: translateY(24px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .shell {
+      position: relative;
+      z-index: 1;
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 22px 18px 44px;
+    }
+
+    .glass {
+      background: var(--card);
+      border: 1px solid var(--line);
+      box-shadow: var(--glow);
+      backdrop-filter: blur(20px);
+    }
+
+    .hero, .panel {
+      position: relative;
+      overflow: hidden;
+      border-radius: 34px;
+      padding: 24px;
+      animation: riseIn 0.8s ease both;
+    }
+
+    .hero::before {
+      content: "";
+      position: absolute;
+      top: -100px;
+      right: -60px;
+      width: 340px;
+      height: 340px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(102,223,255,0.22), transparent 64%);
+    }
+
+    .hero-top {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-end;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #2f66d6;
+      background: rgba(255,255,255,0.66);
+      border: 1px solid rgba(116, 164, 232, 0.18);
+    }
+
+    .badge::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--blue), var(--cyan));
+      box-shadow: 0 0 16px rgba(91,140,255,0.45);
+      animation: pulseDot 2.6s ease-in-out infinite;
+    }
+
+    @keyframes pulseDot {
+      0%, 100% { transform: scale(1); opacity: 0.8; }
+      50% { transform: scale(1.35); opacity: 1; }
+    }
+
+    .hero h1 {
+      margin: 18px 0 12px;
+      font-size: clamp(2.1rem, 4.4vw, 3.8rem);
+      line-height: 1;
+      font-weight: 800;
+      letter-spacing: -0.06em;
+      background: linear-gradient(135deg, #12284e 0%, #3568dd 38%, #4dcbe7 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero p, .subtitle {
+      margin: 0;
+      max-width: 760px;
+      color: var(--muted);
+      line-height: 1.9;
+      font-size: 14px;
+    }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 48px;
+      padding: 0 18px;
+      color: #204d9b;
+      text-decoration: none;
+      font-weight: 700;
+      border-radius: 16px;
+      border: 1px solid rgba(112, 154, 217, 0.18);
+      background: rgba(255,255,255,0.74);
+      transition: transform 0.25s ease;
+    }
+
+    .back-link:hover { transform: translateY(-2px); }
+
+    .summary-strip {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 16px;
+    }
+
+    .summary-card,
+    .factor-card,
+    .detail-card,
+    .model-card {
+      position: relative;
+      overflow: hidden;
+      border-radius: 26px;
+      padding: 20px;
+      animation: riseIn 0.8s ease both;
+    }
+
+    .summary-card strong,
+    .model-card strong {
+      display: block;
+      margin-top: 8px;
+      font-size: 1.8rem;
+      color: #13274b;
+    }
+
+    .meta {
+      color: #7f97b7;
+      font-size: 11px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    .title {
+      margin: 0;
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: #12274c;
+    }
+
+    .factor-list,
+    .detail-list {
+      display: grid;
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .factor-item,
+    .detail-item {
+      border-radius: 18px;
+      padding: 14px;
+      background: rgba(255,255,255,0.72);
+      border: 1px solid rgba(113, 155, 219, 0.14);
+      animation: riseIn 0.55s ease both;
+    }
+
+    .factor-item strong,
+    .detail-item strong {
+      display: block;
+      font-size: 14px;
+      color: #13274b;
+      margin-bottom: 4px;
+    }
+
+    .factor-item span,
+    .detail-item span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.7;
+    }
+
+    .bar-track {
+      margin-top: 10px;
+      height: 8px;
+      border-radius: 999px;
+      background: rgba(17, 39, 75, 0.08);
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      border-radius: 999px;
+    }
+
+    .bar-up { background: linear-gradient(135deg, #ff9caf, #ff7a92); }
+    .bar-down { background: linear-gradient(135deg, #79ebb2, #58d99a); }
+
+    .model-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 16px;
+    }
+
+    .model-card {
+      background: var(--dark-card);
+      color: white;
+    }
+
+    .model-card strong { color: white; }
+    .model-card p { color: #c6d8f4; line-height: 1.8; font-size: 14px; margin: 12px 0 0; }
+
+    .empty-card {
+      margin-top: 16px;
+      border-radius: 24px;
+      padding: 20px;
+      color: #6f87ab;
+      line-height: 1.85;
+      background: rgba(255,255,255,0.66);
+      border: 1px dashed rgba(113, 155, 219, 0.18);
+    }
+
+    @media (max-width: 960px) {
+      .summary-strip,
+      .layout,
+      .model-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .shell {
+        padding: 12px 12px 24px;
+      }
+
+      .hero, .panel, .summary-card, .factor-card, .detail-card, .model-card {
+        border-radius: 24px;
+        padding: 18px;
+      }
+
+      .hero-top {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="orb orb-a"></div>
+  <div class="orb orb-b"></div>
+
+  <div class="shell">
+    <section class="hero glass">
+      <div class="hero-top">
+        <div>
+          <div class="badge">AI Explainability Interface</div>
+          <h1>SHAP 可解释性分析</h1>
+          <p>
+            这一页专门用来回答一个关键问题：
+            模型为什么给出当前的风险判断？
+            我们会把推动风险上升的因素和对冲风险的因素拆开展示，让预测结果更透明、更容易解释。
+          </p>
+        </div>
+        <a href="{{ url_for('pages.risk_report_page') }}" class="back-link">返回评估页</a>
+      </div>
+    </section>
+
+    <div id="shapContent" class="hidden">
+      <section class="summary-strip">
+        <article class="summary-card glass" style="animation-delay:0.06s;">
+          <div class="meta">Overall Result</div>
+          <strong id="summaryCategory">--</strong>
+          <p class="subtitle" id="summaryRisk">--</p>
+        </article>
+        <article class="summary-card glass" style="animation-delay:0.12s;">
+          <div class="meta">Heart Probability</div>
+          <strong id="summaryHeart">--</strong>
+          <p class="subtitle">心脏风险模型的单次预测概率</p>
+        </article>
+        <article class="summary-card glass" style="animation-delay:0.18s;">
+          <div class="meta">Stroke Probability</div>
+          <strong id="summaryStroke">--</strong>
+          <p class="subtitle">卒中风险模型的单次预测概率</p>
+        </article>
+      </section>
+
+      <section class="layout">
+        <article class="factor-card glass" style="animation-delay:0.24s;">
+          <h2 class="title">推高风险的主要因素</h2>
+          <p class="subtitle">这些特征在本次预测中更明显地推动了风险上升。</p>
+          <div id="positiveFactors" class="factor-list"></div>
+        </article>
+
+        <article class="factor-card glass" style="animation-delay:0.3s;">
+          <h2 class="title">对冲风险的主要因素</h2>
+          <p class="subtitle">这些特征在一定程度上抵消了整体风险。</p>
+          <div id="negativeFactors" class="factor-list"></div>
+        </article>
+      </section>
+
+      <section class="model-grid">
+        <article class="model-card" style="animation-delay:0.36s;">
+          <div class="meta">Heart Model Explanation</div>
+          <strong id="heartExplainStatus">--</strong>
+          <p id="heartExplainText">--</p>
+        </article>
+        <article class="model-card" style="animation-delay:0.42s;">
+          <div class="meta">Stroke Model Explanation</div>
+          <strong id="strokeExplainStatus">--</strong>
+          <p id="strokeExplainText">--</p>
+        </article>
+      </section>
+
+      <section class="detail-card glass" style="margin-top:16px;animation-delay:0.48s;">
+        <h2 class="title">模型解释说明</h2>
+        <div class="detail-list">
+          <div class="detail-item">
+            <strong>什么是 SHAP</strong>
+            <span>SHAP 会把单次预测拆成多个特征贡献，帮助解释每个输入特征对结果的影响方向和大致力度。</span>
+          </div>
+          <div class="detail-item">
+            <strong>如何理解正负因素</strong>
+            <span>正向因素表示推高风险，负向因素表示对冲风险。百分比用于表示相对影响强弱，便于展示理解。</span>
+          </div>
+          <div class="detail-item">
+            <strong>解释结果的用途</strong>
+            <span>解释结果可用于帮助用户理解风险来源，也可以在演示、答辩或机构端展示时体现模型透明度。</span>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div id="emptyState" class="empty-card glass">
+      当前还没有最近一次预测的解释结果。请先回到评估页完成一次预测，
+      系统才会把最新的 SHAP 解释分析同步到这里。
+    </div>
+  </div>
+
+  <script>
+    const categoryLabelMap = {
+      0: "当前未见明显高风险",
+      1: "心脏风险偏高",
+      2: "卒中风险偏高",
+      3: "心脑血管双高风险"
+    };
+
+    function safePercent(value) {
+      if (value === null || value === undefined) {
+        return "--";
+      }
+      return Number(value).toFixed(2) + "%";
+    }
+
+    function factorHtml(items, direction) {
+      if (!items || !items.length) {
+        return '<div class="factor-item"><strong>暂无可展示因素</strong><span>当前没有足够的解释结果可供展示。</span></div>';
+      }
+
+      return items.map(function(item, index) {
+        const width = Math.min(Number(item.impact_percent || 0), 100);
+        const sign = direction === "increase" ? "+" : "-";
+        return '<div class="factor-item" style="animation-delay:' + (index * 0.05) + 's;">' +
+          '<strong>' + item.feature + '  ' + sign + Number(item.impact_percent || 0).toFixed(2) + '%</strong>' +
+          '<span>当前取值：' + item.feature_value + '</span>' +
+          '<div class="bar-track"><div class="bar-fill ' + (direction === "increase" ? "bar-up" : "bar-down") + '" style="width:' + width + '%;"></div></div>' +
+          '</div>';
+      }).join("");
+    }
+
+    function initPage() {
+      const raw = sessionStorage.getItem("cardiospark_latest_result");
+      if (!raw) {
+        return;
+      }
+
+      const data = JSON.parse(raw);
+      const summary = data.combined_shap_summary || {};
+      document.getElementById("emptyState").classList.add("hidden");
+      document.getElementById("shapContent").classList.remove("hidden");
+
+      document.getElementById("summaryCategory").textContent = categoryLabelMap[data.final_category ?? 0] || "风险评估完成";
+      document.getElementById("summaryRisk").textContent = data.risk_summary || "--";
+      document.getElementById("summaryHeart").textContent = safePercent(data.heart_probability_percent);
+      document.getElementById("summaryStroke").textContent = safePercent(data.stroke_probability_percent);
+
+      document.getElementById("positiveFactors").innerHTML = factorHtml(summary.top_positive_factors || [], "increase");
+      document.getElementById("negativeFactors").innerHTML = factorHtml(summary.top_negative_factors || [], "decrease");
+
+      const heartExplanation = data.heart_shap_explanation || {};
+      const strokeExplanation = data.stroke_shap_explanation || {};
+      document.getElementById("heartExplainStatus").textContent = heartExplanation.available ? "Explanation Ready" : "Explanation Unavailable";
+      document.getElementById("heartExplainText").textContent = heartExplanation.message || "暂无说明";
+      document.getElementById("strokeExplainStatus").textContent = strokeExplanation.available ? "Explanation Ready" : "Explanation Unavailable";
+      document.getElementById("strokeExplainText").textContent = strokeExplanation.message || "暂无说明";
+    }
+
+    initPage();
+  </script>
+</body>
+</html>

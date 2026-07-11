@@ -484,6 +484,48 @@
       animation: riseIn 0.55s ease both;
     }
 
+    .explain-entry {
+      margin-top: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      border-radius: 20px;
+      padding: 16px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .explain-entry p {
+      margin: 0;
+      color: #d7e7ff;
+      line-height: 1.7;
+      font-size: 13px;
+      max-width: 420px;
+    }
+
+    .explain-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 46px;
+      padding: 0 18px;
+      border-radius: 16px;
+      text-decoration: none;
+      color: white;
+      font-size: 14px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #59d7ff, #5b8cff);
+      box-shadow: 0 12px 24px rgba(89,215,255,0.16);
+      transition: transform 0.25s ease, box-shadow 0.25s ease;
+    }
+
+    .explain-link:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 18px 30px rgba(91,140,255,0.20);
+    }
+
     .hidden {
       display: none !important;
     }
@@ -675,6 +717,10 @@
               <div class="meta">Health Suggestions</div>
               <div id="suggestionsList" class="list-wrap"></div>
             </div>
+            <div class="explain-entry" id="explainEntry" style="display:none;">
+              <p>想进一步了解模型为什么给出当前判断？进入独立的 AI 可解释性分析页，查看推高风险和对冲风险的关键因素。</p>
+              <a href="{{ url_for('pages.shap_analysis_page') }}" class="explain-link">查看 AI 解释分析</a>
+            </div>
           </div>
         </div>
       </aside>
@@ -803,6 +849,8 @@
 
       document.getElementById("highlightsList").innerHTML = listHtml(data.key_highlights || ["暂无额外提醒"]);
       document.getElementById("suggestionsList").innerHTML = listHtml((data.intervention_plan || {}).suggestions || ["暂无建议"]);
+      sessionStorage.setItem("cardiospark_latest_result", JSON.stringify(data));
+      document.getElementById("explainEntry").style.display = "flex";
 
       renderGauge(data.heart_probability_percent, data.stroke_probability_percent);
     }

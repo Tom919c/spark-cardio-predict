@@ -1,3 +1,4 @@
+from src.ml.model_explainer import ModelExplainer
 from src.ml.predict import CardioRiskPredictor
 from src.ml.train import CardioModelTrainer
 from src.models.intervention_plan import InterventionPlan
@@ -17,6 +18,7 @@ class RiskService:
         self.data_service = DataService(config)
         self.training_recorder = TrainingResultRecorder()
         self.intervention_service = InterventionService()
+        self.model_explainer = ModelExplainer()
         self.default_model_name = config.get("DEFAULT_MODEL_NAME", "random_forest")
         self.available_model_names = config.get("AVAILABLE_MODEL_NAMES", [])
         self.enable_multi_run_training = config.get("ENABLE_MULTI_RUN_TRAINING", True)
@@ -72,6 +74,14 @@ class RiskService:
 
         predictor = CardioRiskPredictor()
         prediction = predictor.predict(heart_model_path, stroke_model_path, sample)
+        heart_explanation = self.model_explainer.explain_prediction(
+            model_path=heart_model_path,
+            sample=sample,
+        )
+        stroke_explanation = self.model_explainer.explain_prediction(
+            model_path=stroke_model_path,
+            sample=sample,
+        )
         final_category = self._build_final_category(
             prediction["heart_predicted_probability"],
             prediction["stroke_predicted_probability"],
@@ -109,6 +119,12 @@ class RiskService:
         result["heart_probability_percent"] = interpretation["heart_probability_percent"]
         result["stroke_probability_percent"] = interpretation["stroke_probability_percent"]
         result["final_category"] = final_category
+        result["heart_shap_explanation"] = heart_explanation
+        result["stroke_shap_explanation"] = stroke_explanation
+        result["combined_shap_summary"] = self._build_combined_shap_summary(
+            heart_explanation=heart_explanation,
+            stroke_explanation=stroke_explanation,
+        )
         return result
 
     def _build_final_category(self, heart_probability, stroke_probability):
@@ -121,3 +137,54 @@ class RiskService:
         if not heart_positive and stroke_positive:
             return 2
         return 3
+
+    def _build_combined_shap_summary(self, heart_explanation, stroke_explanation):
+        if not heart_explanation.get("available") or not stroke_explanation.get("available"):
+            return {
+                "available": False,
+                "message": "SHAP explanation is unavailable for one or more models.",
+                "top_positive_factors": [],
+                "top_negative_factors": [],
+            }
+
+        merged = {}
+        for source_name, explanation in (
+            ("heart", heart_explanation),
+            ("stroke", stroke_explanation),
+        ):
+            for item in explanation.get("top_positive_factors", []) + explanation.get("top_negative_factors", []):
+                feature_name = item["feature"]
+                if feature_name not in merged:
+                    merged[feature_name] = {
+                        "feature": feature_name,
+                        "feature_value": item.get("feature_value"),
+                        "contribution": 0.0,
+                        "impact_percent": 0.0,
+                        "sources": [],
+                    }
+                merged[feature_name]["contribution"] += item.get("contribution", 0.0)
+                merged[feature_name]["impact_percent"] += item.get("impact_percent", 0.0)
+                merged[feature_name]["sources"].append(source_name)
+
+        items = list(merged.values())
+        positive = sorted(
+            [item for item in items if item["contribution"] > 0],
+            key=lambda item: item["contribution"],
+            reverse=True,
+        )[:4]
+        negative = sorted(
+            [item for item in items if item["contribution"] < 0],
+            key=lambda item: item["contribution"],
+        )[:4]
+
+        for item in positive + negative:
+            item["contribution"] = round(item["contribution"], 6)
+            item["impact_percent"] = round(item["impact_percent"], 2)
+            item["direction"] = "increase" if item["contribution"] >= 0 else "decrease"
+
+        return {
+            "available": True,
+            "message": "Combined SHAP summary generated successfully.",
+            "top_positive_factors": positive,
+            "top_negative_factors": negative,
+        }
