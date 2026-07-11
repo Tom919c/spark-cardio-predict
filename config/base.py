@@ -56,8 +56,12 @@ class BaseConfig:
     RANDOM_STATE = 42
 
     MODEL_OUTPUT_DIR = "data/feature/models"
+    DEFAULT_HEART_MODEL_FILE = "random_forest_heart_demo_round10_20260711_131227.joblib"
+    DEFAULT_STROKE_MODEL_FILE = "random_forest_stroke_demo_round10_20260711_131303.joblib"
     DEFAULT_MODEL_NAME = "logistic_regression"
     AVAILABLE_MODEL_NAMES = ["logistic_regression", "random_forest"]
     ENABLE_MULTI_RUN_TRAINING = True
     DEFAULT_TRAINING_ROUNDS = 3
     BEST_MODEL_METRIC = "roc_auc"
+    HEART_RISK_THRESHOLD = 0.3
+    STROKE_RISK_THRESHOLD = 0.2

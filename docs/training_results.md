@@ -487,3 +487,141 @@
 - 最终 Accuracy：``
 - 最终 F1 Score：``
 - 最终 ROC AUC：``
+
+---
+
+## 自动训练记录 2026-07-11 12:42:08
+- 模型名称：`random_forest`
+- 训练轮数：`3`
+- 实验标签：`demo`
+- 最优选择指标：`roc_auc`
+
+### 每轮结果
+
+#### 第 1 轮
+- run_id：``
+- 随机种子：`42`
+- 模型路径：``
+- Accuracy：``
+- F1 Score：``
+- ROC AUC：``
+
+#### 第 2 轮
+- run_id：``
+- 随机种子：`43`
+- 模型路径：``
+- Accuracy：``
+- F1 Score：``
+- ROC AUC：``
+
+#### 第 3 轮
+- run_id：``
+- 随机种子：`44`
+- 模型路径：``
+- Accuracy：``
+- F1 Score：``
+- ROC AUC：``
+
+### 最终最佳结果
+- 最佳轮次：`第 1 轮`
+- 最佳模型路径：``
+- 最终 Accuracy：``
+- 最终 F1 Score：``
+- 最终 ROC AUC：``
+
+---
+
+## 自动训练记录 2026-07-11 13:13:03
+- 模型名称：`random_forest`
+- 训练轮数：`10`
+- 实验标签：`demo`
+- 最优选择指标：`roc_auc`
+
+### 每轮结果
+
+#### 第 1 轮
+- run_id：``
+- 随机种子：`42`
+- 模型路径：``
+- Accuracy：``
+- F1 Score：``
+- ROC AUC：``
+
+#### 第 2 轮
+- run_id：``
+- 随机种子：`43`
+- 模型路径：``
+- Accuracy：``
+- F1 Score：``
+- ROC AUC：``
+
+#### 第 3 轮
+- run_id：``
+- 随机种子：`44`
+- 模型路径：``
+- Accuracy：``
+- F1 Score：``
+- ROC AUC：``
+
+#### 第 4 轮
+- run_id：``
+- 随机种子：`45`
+- 模型路径：``
+- Accuracy：``
+- F1 Score：``
+- ROC AUC：``
+
+#### 第 5 轮
+- run_id：``
+- 随机种子：`46`
+- 模型路径：``
+- Accuracy：``
+- F1 Score：``
+- ROC AUC：``
+
+#### 第 6 轮
+- run_id：``
+- 随机种子：`47`
+- 模型路径：``
+- Accuracy：``
+- F1 Score：``
+- ROC AUC：``
+
+#### 第 7 轮
+- run_id：``
+- 随机种子：`48`
+- 模型路径：``
+- Accuracy：``
+- F1 Score：``
+- ROC AUC：``
+
+#### 第 8 轮
+- run_id：``
+- 随机种子：`49`
+- 模型路径：``
+- Accuracy：``
+- F1 Score：``
+- ROC AUC：``
+
+#### 第 9 轮
+- run_id：``
+- 随机种子：`50`
+- 模型路径：``
+- Accuracy：``
+- F1 Score：``
+- ROC AUC：``
+
+#### 第 10 轮
+- run_id：``
+- 随机种子：`51`
+- 模型路径：``
+- Accuracy：``
+- F1 Score：``
+- ROC AUC：``
+
+### 最终最佳结果
+- 最佳轮次：`第 7 轮`
+- 最佳模型路径：``
+- 最终 Accuracy：``
+- 最终 F1 Score：``
+- 最终 ROC AUC：``

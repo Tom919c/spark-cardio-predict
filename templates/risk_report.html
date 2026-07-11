@@ -315,139 +315,6 @@
       font-size: 12px;
       letter-spacing: 0.08em;
     }
-    .result-panel {
-      background: var(--dark-card);
-      color: white;
-    }
-    .result-panel .title,
-    .result-panel .subtitle { color: white; }
-    .result-panel .subtitle { opacity: 0.72; }
-    .empty {
-      border-radius: 22px;
-      padding: 20px;
-      color: #b8d0f0;
-      line-height: 1.84;
-      background: rgba(255,255,255,0.06);
-      border: 1px dashed rgba(206, 225, 255, 0.16);
-    }
-    .result-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 14px;
-    }
-    .result-card,
-    .prob-card,
-    .list-card,
-    .chart-card {
-      position: relative;
-      overflow: hidden;
-      border-radius: 22px;
-      padding: 16px;
-      background: rgba(255,255,255,0.08);
-      border: 1px solid rgba(255,255,255,0.08);
-    }
-    .result-card::before,
-    .prob-card::before,
-    .list-card::before,
-    .chart-card::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(135deg, rgba(255,255,255,0.06), transparent 45%, transparent 72%, rgba(89,215,255,0.08));
-      pointer-events: none;
-    }
-    .meta {
-      color: #9cb4d6;
-      font-size: 11px;
-      letter-spacing: 0.12em;
-    }
-    .result-main {
-      display: block;
-      margin-top: 10px;
-      font-size: 1.42rem;
-      font-weight: 800;
-      line-height: 1.5;
-      color: white;
-    }
-    .pill {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      margin-top: 12px;
-      padding: 7px 12px;
-      border-radius: 999px;
-      font-size: 12px;
-      font-weight: 900;
-      letter-spacing: 0.04em;
-    }
-    .risk-low { background: rgba(137,240,190,0.16); color: #b7ffd7; }
-    .risk-mid { background: rgba(255,201,116,0.16); color: #ffe1a6; }
-    .risk-high { background: rgba(255,138,162,0.16); color: #ffd0db; }
-    .chart-card {
-      margin-top: 14px;
-      transition: transform 0.3s ease;
-    }
-    .chart-card:hover { transform: translateY(-2px); }
-    .stack {
-      display: grid;
-      gap: 14px;
-      margin-top: 14px;
-    }
-    .list-wrap {
-      display: grid;
-      gap: 10px;
-      margin-top: 12px;
-    }
-    .list-item {
-      border-radius: 16px;
-      padding: 12px 14px;
-      background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(255,255,255,0.06);
-      color: #e4efff;
-      line-height: 1.76;
-      font-size: 14px;
-      animation: riseIn 0.55s ease both;
-    }
-    .explain-entry {
-      margin-top: 14px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      flex-wrap: wrap;
-      border-radius: 20px;
-      padding: 16px;
-      background: rgba(255,255,255,0.08);
-      border: 1px solid rgba(255,255,255,0.08);
-    }
-    .explain-entry p {
-      margin: 0;
-      color: #d7e7ff;
-      line-height: 1.7;
-      font-size: 13px;
-      max-width: 420px;
-    }
-    .explain-link {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 46px;
-      padding: 0 18px;
-      border-radius: 16px;
-      text-decoration: none;
-      color: white;
-      font-size: 14px;
-      font-weight: 800;
-      background: linear-gradient(135deg, #59d7ff, #5b8cff);
-      box-shadow: 0 12px 24px rgba(89,215,255,0.16);
-      transition: transform 0.25s ease, box-shadow 0.25s ease;
-    }
-    .explain-link:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 18px 30px rgba(91,140,255,0.20);
-    }
-    .hidden { display: none !important; }
-    #resultArea { animation: riseIn 0.6s ease both; }
     @media (max-width: 1080px) {
       .layout { grid-template-columns: 1fr; }
     }
@@ -455,7 +322,7 @@
       .shell { padding: 12px 12px 24px; }
       .hero { padding: 18px; border-radius: 26px; }
       .hero-top { flex-direction: column; align-items: flex-start; }
-      .field-grid, .result-grid { grid-template-columns: 1fr; }
+      .field-grid { grid-template-columns: 1fr; }
       .panel { border-radius: 24px; padding: 18px; }
     }
   </style>
@@ -479,7 +346,7 @@
       </div>
     </section>
 
-    <div class="layout">
+    <div class="layout" style="grid-template-columns:1fr 0.7fr;">
       <section class="panel glass" style="animation-delay:0.08s;">
         <h2 class="title">健康信息录入</h2>
         <div class="subtitle">请根据你的实际情况填写以下信息，系统将生成个性化的风险结果与建议。</div>
@@ -564,188 +431,27 @@
         </form>
       </section>
 
-      <aside class="panel result-panel" style="animation-delay:0.16s;">
-        <h2 class="title">结果展示</h2>
-        <div class="subtitle">评估完成后，系统将在这里输出综合风险判断、概率参考、重点提醒与健康建议。</div>
-
-        <div id="emptyState" class="empty">
-          结果面板正在等待输入。完成评估后，这里会切换为更丰富的动态结果视图，
-          帮助你更容易理解自己的健康风险状态。
+      <aside class="panel glass" style="animation-delay:0.16s;">
+        <h2 class="title">填写小提示</h2>
+        <div class="subtitle">根据真实情况填写，会让评估结果更有参考价值。</div>
+        <div class="notice" style="margin-top:0;">
+          <p>
+            如果你不确定某一项该怎么选，建议按最近一次体检结果或平时最接近的状态填写。
+            信息越接近真实情况，得到的风险判断越有意义。
+          </p>
         </div>
-
-        <div id="resultArea" class="hidden">
-          <div class="result-grid">
-            <div class="result-card">
-              <div class="meta">综合判断 / Overall Decision</div>
-              <span class="result-main" id="finalCategoryText">--</span>
-              <div class="pill risk-low" id="riskLevelBadge">--</div>
-            </div>
-            <div class="result-card">
-              <div class="meta">风险摘要 / Risk Summary</div>
-              <span class="result-main" style="font-size:1.02rem;line-height:1.7;" id="riskSummaryText">--</span>
-            </div>
-          </div>
-
-          <div class="chart-card">
-            <div id="gaugeChart" style="height: 270px;"></div>
-          </div>
-
-          <div class="result-grid" style="margin-top:14px;">
-            <div class="prob-card">
-              <div class="meta">心脏风险 / Heart Risk</div>
-              <span class="result-main" id="heartProbText">--</span>
-            </div>
-            <div class="prob-card">
-              <div class="meta">卒中风险 / Stroke Risk</div>
-              <span class="result-main" id="strokeProbText">--</span>
-            </div>
-          </div>
-
-          <div class="stack">
-            <div class="list-card">
-              <div class="meta">重点提示 / Key Highlights</div>
-              <div id="highlightsList" class="list-wrap"></div>
-            </div>
-            <div class="list-card">
-              <div class="meta">健康建议 / Health Suggestions</div>
-              <div id="suggestionsList" class="list-wrap"></div>
-            </div>
-            <div class="explain-entry" id="explainEntry" style="display:none;">
-              <p>想进一步了解模型为什么给出当前判断？进入独立的 AI 风险原因分析页，查看推高风险和对冲风险的关键因素。</p>
-              <a href="{{ url_for('pages.shap_analysis_page') }}" class="explain-link">查看风险原因分析</a>
-            </div>
-          </div>
+        <div class="notice" style="background:linear-gradient(135deg, #27457f, #3f68be);">
+          <p>
+            评估完成后，你将看到综合风险判断、心脏与卒中风险概率、健康建议以及更详细的风险原因分析。
+          </p>
         </div>
       </aside>
     </div>
   </div>
 
   <script>
-    const categoryLabelMap = {
-      0: "当前未见明显高风险",
-      1: "心脏风险偏高",
-      2: "卒中风险偏高",
-      3: "心脑血管双高风险"
-    };
-
-    const badgeClassMap = {
-      0: { cls: "pill risk-low", text: "低风险提示" },
-      1: { cls: "pill risk-mid", text: "重点关注" },
-      2: { cls: "pill risk-mid", text: "重点关注" },
-      3: { cls: "pill risk-high", text: "高风险预警" }
-    };
-
-    let gaugeChart = null;
-
     function toNumber(value) {
       return Number(value);
-    }
-
-    function safePercent(value) {
-      if (value === null || value === undefined) {
-        return "--";
-      }
-      return (Number(value) * 100).toFixed(2) + "%";
-    }
-
-    function listHtml(items) {
-      return (items || []).map(function(item, index) {
-        return '<div class="list-item" style="animation-delay:' + (index * 0.05) + 's;">' + item + "</div>";
-      }).join("");
-    }
-
-    function renderGauge(heartPercent, strokePercent) {
-      const target = Math.max(heartPercent || 0, strokePercent || 0);
-      const dom = document.getElementById("gaugeChart");
-      if (!gaugeChart) {
-        gaugeChart = echarts.init(dom);
-        window.addEventListener("resize", function() {
-          if (gaugeChart) gaugeChart.resize();
-        });
-      }
-
-      gaugeChart.setOption({
-        series: [{
-          type: "gauge",
-          startAngle: 220,
-          endAngle: -40,
-          center: ["50%", "58%"],
-          radius: "96%",
-          min: 0,
-          max: 100,
-          axisLine: {
-            lineStyle: {
-              width: 18,
-              color: [
-                [0.5, "#89f0be"],
-                [0.75, "#ffc974"],
-                [1, "#ff8aa2"]
-              ]
-            }
-          },
-          progress: {
-            show: true,
-            width: 18,
-            itemStyle: {
-              color: {
-                type: "linear",
-                x: 0, y: 0, x2: 1, y2: 0,
-                colorStops: [
-                  { offset: 0, color: "#66dfff" },
-                  { offset: 1, color: "#5b8cff" }
-                ]
-              }
-            }
-          },
-          pointer: { show: false },
-          anchor: { show: false },
-          axisTick: { show: false },
-          splitLine: { show: false },
-          axisLabel: { distance: -42, color: "#a5bcdb", fontSize: 12 },
-          title: {
-            show: true,
-            offsetCenter: [0, "42%"],
-            color: "#a3bad8",
-            fontSize: 13
-          },
-          detail: {
-            valueAnimation: true,
-            formatter: function(value) { return value.toFixed(1) + "%"; },
-            color: "#ffffff",
-            fontSize: 30,
-            fontWeight: "bold",
-            offsetCenter: [0, "10%"]
-          },
-          data: [{ value: target, name: "风险强度参考" }]
-        }]
-      });
-    }
-
-    function renderResult(data) {
-      document.getElementById("emptyState").classList.add("hidden");
-      document.getElementById("resultArea").classList.remove("hidden");
-
-      const category = data.final_category ?? 0;
-      document.getElementById("finalCategoryText").textContent = categoryLabelMap[category] || "风险评估完成";
-      document.getElementById("riskSummaryText").textContent = data.risk_summary || "--";
-
-      const badge = document.getElementById("riskLevelBadge");
-      badge.className = (badgeClassMap[category] || badgeClassMap[0]).cls;
-      badge.textContent = (badgeClassMap[category] || badgeClassMap[0]).text;
-
-      document.getElementById("heartProbText").textContent = data.heart_probability_percent != null
-        ? Number(data.heart_probability_percent).toFixed(2) + "%"
-        : safePercent(data.heart_predicted_probability);
-      document.getElementById("strokeProbText").textContent = data.stroke_probability_percent != null
-        ? Number(data.stroke_probability_percent).toFixed(2) + "%"
-        : safePercent(data.stroke_predicted_probability);
-
-      document.getElementById("highlightsList").innerHTML = listHtml(data.key_highlights || ["暂无额外提醒"]);
-      document.getElementById("suggestionsList").innerHTML = listHtml((data.intervention_plan || {}).suggestions || ["暂无建议"]);
-      sessionStorage.setItem("cardiospark_latest_result", JSON.stringify(data));
-      document.getElementById("explainEntry").style.display = "flex";
-
-      renderGauge(data.heart_probability_percent, data.stroke_probability_percent);
     }
 
     document.getElementById("predictForm").addEventListener("submit", async function(event) {
@@ -783,7 +489,8 @@
         if (!response.ok || !result.success) {
           throw new Error(result.message || ("HTTP " + response.status));
         }
-        renderResult(result.data || {});
+        sessionStorage.setItem("cardiospark_latest_result", JSON.stringify(result.data || {}));
+        window.location.href = "{{ url_for('pages.result_report_page') }}";
       } catch (error) {
         alert("评估失败：" + error.message);
         console.error(error);
