@@ -19,11 +19,18 @@ def risk_report_page():
     model_dir = Path(current_app.config.get("MODEL_OUTPUT_DIR", "data/feature/models"))
     heart_model_file = current_app.config.get("DEFAULT_HEART_MODEL_FILE", "")
     stroke_model_file = current_app.config.get("DEFAULT_STROKE_MODEL_FILE", "")
+    default_heart_model_path = ""
+    default_stroke_model_path = ""
+
+    if heart_model_file:
+        default_heart_model_path = str((model_dir / heart_model_file).as_posix())
+    if stroke_model_file:
+        default_stroke_model_path = str((model_dir / stroke_model_file).as_posix())
 
     return render_template(
         "risk_report.html",
-        default_heart_model_path=str((model_dir / heart_model_file).as_posix()),
-        default_stroke_model_path=str((model_dir / stroke_model_file).as_posix()),
+        default_heart_model_path=default_heart_model_path,
+        default_stroke_model_path=default_stroke_model_path,
     )
 
 

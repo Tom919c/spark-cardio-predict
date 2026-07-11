@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from src.ml.model_explainer import ModelExplainer
 from src.ml.model_registry import ModelRegistry
 from src.ml.predict import CardioRiskPredictor
@@ -74,10 +76,7 @@ class RiskService:
             )
 
         normalised_sample = self._normalise_sample(sample)
-        if heart_model_path and stroke_model_path:
-            model_paths = {"heart": heart_model_path, "stroke": stroke_model_path}
-        else:
-            model_paths = self.registry.load_active_models()
+        model_paths = self._resolve_model_paths(heart_model_path, stroke_model_path)
 
         predictor = CardioRiskPredictor()
         prediction = predictor.predict(model_paths, normalised_sample)
@@ -140,6 +139,17 @@ class RiskService:
             stroke_explanation=stroke_explanation,
         )
         return result
+
+    def _resolve_model_paths(self, heart_model_path=None, stroke_model_path=None):
+        if heart_model_path and stroke_model_path:
+            candidate_paths = {
+                "heart": str(Path(heart_model_path)),
+                "stroke": str(Path(stroke_model_path)),
+            }
+            if all(Path(path).is_file() for path in candidate_paths.values()):
+                return candidate_paths
+
+        return self.registry.load_active_models()
 
     def _build_final_category(self, heart_probability, stroke_probability):
         heart_positive = heart_probability is not None and heart_probability >= self.thresholds[1]

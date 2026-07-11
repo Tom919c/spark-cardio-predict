@@ -47,6 +47,21 @@ def _project_path(value: str) -> str:
     return str(path if path.is_absolute() else PROJECT_ROOT / path)
 
 
+def _default_model_file(target_name: str) -> str:
+    configured = os.getenv(f"DEFAULT_{target_name.upper()}_MODEL_FILE", "").strip()
+    if configured:
+        return configured
+
+    model_dir = PROJECT_ROOT / "data" / "feature" / "models"
+    if not model_dir.exists():
+        return ""
+
+    candidates = sorted(model_dir.glob(f"random_forest_{target_name}_*.joblib"))
+    if not candidates:
+        return ""
+    return candidates[-1].name
+
+
 class BaseConfig:
     """Runtime settings with safe local defaults."""
 
@@ -119,8 +134,8 @@ class BaseConfig:
     }
     RISK_LEVEL_THRESHOLDS = (0.15, 0.35, 0.60, 0.80)
 
-    DEFAULT_HEART_MODEL_FILE = os.getenv("DEFAULT_HEART_MODEL_FILE", "")
-    DEFAULT_STROKE_MODEL_FILE = os.getenv("DEFAULT_STROKE_MODEL_FILE", "")
+    DEFAULT_HEART_MODEL_FILE = _default_model_file("heart")
+    DEFAULT_STROKE_MODEL_FILE = _default_model_file("stroke")
 
     @classmethod
     def as_dict(cls) -> dict:

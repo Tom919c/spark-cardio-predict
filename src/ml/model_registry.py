@@ -17,6 +17,9 @@ class ModelRegistry:
 
     def load_active_models(self) -> dict:
         if not self.manifest_path.exists():
+            bootstrapped = self._bootstrap_from_existing_models()
+            if bootstrapped:
+                return bootstrapped
             raise FileNotFoundError("No active model manifest was found. Train models first.")
 
         manifest = json.loads(self.manifest_path.read_text(encoding="utf-8"))
@@ -66,3 +69,16 @@ class ModelRegistry:
         if not artifact.is_absolute():
             artifact = self.manifest_path.parent / artifact
         return artifact.resolve()
+
+    def _bootstrap_from_existing_models(self) -> dict | None:
+        heart_candidates = sorted(self.model_dir.glob("random_forest_heart_*.joblib"))
+        stroke_candidates = sorted(self.model_dir.glob("random_forest_stroke_*.joblib"))
+        if not heart_candidates or not stroke_candidates:
+            return None
+
+        models = {
+            "heart": str(heart_candidates[-1].resolve()),
+            "stroke": str(stroke_candidates[-1].resolve()),
+        }
+        self.register(models, metrics={})
+        return models

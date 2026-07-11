@@ -47,6 +47,6 @@ def predict_single_risk():
             heart_model_path=heart_model_path or None,
             stroke_model_path=stroke_model_path or None,
         )
-    except (ValueError, FileNotFoundError) as exc:
+    except (ValueError, FileNotFoundError, OSError) as exc:
         return error_response(message=str(exc), code=400)
     return success_response(message="Dual-risk prediction completed successfully.", data=result)
