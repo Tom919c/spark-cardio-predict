@@ -21,7 +21,7 @@ class BaseConfig:
     HDFS_FEATURE_PATH = "hdfs://uestc04:8020/input/cardio_project/feature/cardio_features"
     HDFS_WEB_URL = "http://192.168.174.128:9870"
     HDFS_USER = "zhao"
-    HDFS_UPLOAD_DIR = "/input/cardio_project/raw"
+    HDFS_UPLOAD_DIR = "/input/cardio_project/staging"
 
     # Database connection placeholders. Fill these values after you provide them.
     MYSQL_HOST = ""

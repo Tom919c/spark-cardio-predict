@@ -2,12 +2,12 @@ import os
 
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-LOCAL_DATASET_DIR = os.path.join(BASE_DIR, "data", "raw", "datasets")
-DEFAULT_LOCAL_FILE = os.path.join(LOCAL_DATASET_DIR, "cardio_train.csv")
+LOCAL_STAGING_DIR = os.path.join(BASE_DIR, "data", "staging")
+DEFAULT_LOCAL_FILE = os.path.join(LOCAL_STAGING_DIR, "CVD_Standard_DWD.csv")
 
 HDFS_URL = "http://192.168.174.128:9870"
 HDFS_USER = "zhao"
-HDFS_DIR = "/input/cardio_project/raw"
+HDFS_DIR = "/input/cardio_project/staging"
 
 
 def upload_to_hdfs(local_path=DEFAULT_LOCAL_FILE, hdfs_dir=HDFS_DIR):
