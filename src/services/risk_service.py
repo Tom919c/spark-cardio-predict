@@ -1,4 +1,5 @@
 from src.ml.model_explainer import ModelExplainer
+from src.ml.model_registry import ModelRegistry
 from src.ml.predict import CardioRiskPredictor
 from src.ml.train import CardioModelTrainer
 from src.models.intervention_plan import InterventionPlan
@@ -11,7 +12,7 @@ from src.utils.validator import PredictionInputValidator
 
 
 class RiskService:
-    """Provides dual-model training and prediction services."""
+    """Provides merged dual-model training and prediction services."""
 
     def __init__(self, config):
         self.config = config
@@ -19,52 +20,52 @@ class RiskService:
         self.training_recorder = TrainingResultRecorder()
         self.intervention_service = InterventionService()
         self.model_explainer = ModelExplainer()
-        self.default_model_name = config.get("DEFAULT_MODEL_NAME", "random_forest")
-        self.available_model_names = config.get("AVAILABLE_MODEL_NAMES", [])
-        self.enable_multi_run_training = config.get("ENABLE_MULTI_RUN_TRAINING", True)
-        self.default_training_rounds = config.get("DEFAULT_TRAINING_ROUNDS", 3)
-        self.best_model_metric = config.get("BEST_MODEL_METRIC", "roc_auc")
         self.feature_columns = config.get("CARDIO_FEATURE_COLUMNS", [])
-        self.heart_risk_threshold = config.get("HEART_RISK_THRESHOLD", 0.5)
-        self.stroke_risk_threshold = config.get("STROKE_RISK_THRESHOLD", 0.5)
+        self.thresholds = config.get("RISK_LEVEL_THRESHOLDS", (0.15, 0.35, 0.60, 0.80))
+        self.default_training_rounds = config.get("DEFAULT_TRAINING_ROUNDS", 1)
+        self.registry = ModelRegistry(
+            config.get("MODEL_OUTPUT_DIR", "data/feature/models"),
+            config.get("MODEL_MANIFEST_PATH", "data/feature/models/active_models.json"),
+            self.feature_columns,
+        )
 
     def get_platform_summary(self):
         return {
-            "target_groups": ["医疗机构", "健康管理机构", "中老年群体"],
-            "core_capabilities": [
-                "数据采集与整合",
-                "双模型风险预测建模",
-                "联合风险等级评估",
-                "干预方案生成",
-                "趋势分析与可视化",
-            ],
-            "status": "training_ready",
-            "default_model_name": self.default_model_name,
-            "available_model_names": self.available_model_names,
-            "multi_run_training": self.enable_multi_run_training,
+            "stage": "merged-platform",
+            "target_groups": ["medical_institutions", "health_management", "residents"],
+            "risk_models": ["heart", "stroke"],
+            "required_features": self.feature_columns,
+            "data_mode": self.config.get("DATA_MODE", "local"),
             "default_training_rounds": self.default_training_rounds,
-            "best_model_metric": self.best_model_metric,
+            "model_status": self._model_status(),
         }
 
     def train_model(self, model_name=None, run_label="", rounds=None):
-        selected_model_name = model_name or self.default_model_name
+        del model_name
         selected_rounds = rounds or self.default_training_rounds
         if selected_rounds <= 0:
-            raise ValueError("rounds 必须大于 0。")
+            raise ValueError("rounds must be greater than 0.")
 
         training_dataframe = self.data_service.get_training_dataframe()
-        trainer = CardioModelTrainer(self.config)
-        training_result = trainer.train_multiple_rounds(
-            dataframe=training_dataframe,
-            model_name=selected_model_name,
-            rounds=selected_rounds,
-            run_label=run_label,
-            best_metric=self.best_model_metric,
-        )
-        self.training_recorder.append_multi_round_result(training_result)
-        return training_result
+        result = None
+        for round_index in range(1, selected_rounds + 1):
+            label = run_label or "phase1"
+            round_label = f"{label}_round{round_index}" if selected_rounds > 1 else label
+            result = CardioModelTrainer(self.config).train(training_dataframe, round_label)
 
-    def predict_risk(self, sample, heart_model_path, stroke_model_path):
+        model_paths = {
+            target: target_result["model_path"]
+            for target, target_result in result["targets"].items()
+        }
+        metrics = {
+            target: target_result["metrics"]
+            for target, target_result in result["targets"].items()
+        }
+        result["registry"] = self.registry.register(model_paths, metrics)
+        self.training_recorder.append_multi_round_result(result)
+        return result
+
+    def predict_risk(self, sample, heart_model_path=None, stroke_model_path=None):
         validator = PredictionInputValidator(required_fields=self.feature_columns)
         validation_result = validator.validate_payload(sample)
         if not validation_result["valid"]:
@@ -72,29 +73,41 @@ class RiskService:
                 f"Prediction payload is missing fields: {validation_result['missing_fields']}"
             )
 
+        normalised_sample = self._normalise_sample(sample)
+        if heart_model_path and stroke_model_path:
+            model_paths = {"heart": heart_model_path, "stroke": stroke_model_path}
+        else:
+            model_paths = self.registry.load_active_models()
+
         predictor = CardioRiskPredictor()
-        prediction = predictor.predict(heart_model_path, stroke_model_path, sample)
+        prediction = predictor.predict(model_paths, normalised_sample)
         heart_explanation = self.model_explainer.explain_prediction(
-            model_path=heart_model_path,
-            sample=sample,
+            model_path=model_paths["heart"],
+            sample=normalised_sample,
         )
         stroke_explanation = self.model_explainer.explain_prediction(
-            model_path=stroke_model_path,
-            sample=sample,
+            model_path=model_paths["stroke"],
+            sample=normalised_sample,
         )
         final_category = self._build_final_category(
             prediction["heart_predicted_probability"],
             prediction["stroke_predicted_probability"],
         )
+        risk_level = self._risk_level(
+            max(
+                prediction["heart_predicted_probability"],
+                prediction["stroke_predicted_probability"],
+            )
+        )
         interpretation = build_risk_interpretation(
-            sample=sample,
+            sample=normalised_sample,
             heart_probability=prediction["heart_predicted_probability"],
             stroke_probability=prediction["stroke_predicted_probability"],
             final_category=final_category,
         )
         intervention_plan = InterventionPlan(
             risk_level=final_category,
-            suggestions=self.intervention_service.build_plan(sample, final_category)[
+            suggestions=self.intervention_service.build_plan(normalised_sample, final_category)[
                 "suggestions"
             ],
         )
@@ -104,14 +117,14 @@ class RiskService:
             risk_level=final_category,
             model_path="dual_model",
             risk_summary=interpretation["risk_summary"],
-            indicator_insights=build_indicator_insights(sample),
+            indicator_insights=build_indicator_insights(normalised_sample),
             intervention_plan=intervention_plan.to_dict(),
             key_highlights=interpretation["key_highlights"],
         )
         result = risk_result.to_dict()
         result["required_fields"] = self.feature_columns
-        result["heart_model_path"] = heart_model_path
-        result["stroke_model_path"] = stroke_model_path
+        result["heart_model_path"] = model_paths["heart"]
+        result["stroke_model_path"] = model_paths["stroke"]
         result["heart_predicted_label"] = prediction["heart_predicted_label"]
         result["stroke_predicted_label"] = prediction["stroke_predicted_label"]
         result["heart_predicted_probability"] = prediction["heart_predicted_probability"]
@@ -119,6 +132,7 @@ class RiskService:
         result["heart_probability_percent"] = interpretation["heart_probability_percent"]
         result["stroke_probability_percent"] = interpretation["stroke_probability_percent"]
         result["final_category"] = final_category
+        result["risk_level"] = risk_level
         result["heart_shap_explanation"] = heart_explanation
         result["stroke_shap_explanation"] = stroke_explanation
         result["combined_shap_summary"] = self._build_combined_shap_summary(
@@ -128,8 +142,10 @@ class RiskService:
         return result
 
     def _build_final_category(self, heart_probability, stroke_probability):
-        heart_positive = heart_probability is not None and heart_probability >= self.heart_risk_threshold
-        stroke_positive = stroke_probability is not None and stroke_probability >= self.stroke_risk_threshold
+        heart_positive = heart_probability is not None and heart_probability >= self.thresholds[1]
+        stroke_positive = (
+            stroke_probability is not None and stroke_probability >= self.thresholds[1]
+        )
         if not heart_positive and not stroke_positive:
             return 0
         if heart_positive and not stroke_positive:
@@ -137,6 +153,17 @@ class RiskService:
         if not heart_positive and stroke_positive:
             return 2
         return 3
+
+    def _risk_level(self, probability):
+        if probability < self.thresholds[0]:
+            return {"code": 1, "name": "I", "color": "#16a34a"}
+        if probability < self.thresholds[1]:
+            return {"code": 2, "name": "II", "color": "#ca8a04"}
+        if probability < self.thresholds[2]:
+            return {"code": 3, "name": "III", "color": "#ea580c"}
+        if probability < self.thresholds[3]:
+            return {"code": 4, "name": "IV", "color": "#dc2626"}
+        return {"code": 5, "name": "V", "color": "#b91c1c"}
 
     def _build_combined_shap_summary(self, heart_explanation, stroke_explanation):
         if not heart_explanation.get("available") or not stroke_explanation.get("available"):
@@ -152,7 +179,9 @@ class RiskService:
             ("heart", heart_explanation),
             ("stroke", stroke_explanation),
         ):
-            for item in explanation.get("top_positive_factors", []) + explanation.get("top_negative_factors", []):
+            for item in explanation.get("top_positive_factors", []) + explanation.get(
+                "top_negative_factors", []
+            ):
                 feature_name = item["feature"]
                 if feature_name not in merged:
                     merged[feature_name] = {
@@ -188,3 +217,27 @@ class RiskService:
             "top_positive_factors": positive,
             "top_negative_factors": negative,
         }
+
+    def _model_status(self):
+        try:
+            models = self.registry.load_active_models()
+        except FileNotFoundError:
+            return {"ready": False, "models": {}}
+        return {"ready": True, "models": models}
+
+    @staticmethod
+    def _normalise_sample(sample):
+        normalised = dict(sample)
+        for field in (
+            "age",
+            "gender",
+            "cholesterol",
+            "diabetes",
+            "hypertension",
+            "smoker",
+            "alcohol",
+            "exercise",
+        ):
+            normalised[field] = int(float(normalised[field]))
+        normalised["bmi"] = round(float(normalised["bmi"]), 2)
+        return normalised

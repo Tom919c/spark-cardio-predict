@@ -1,12 +1,17 @@
-from datetime import datetime
+"""Two independent random-forest training with probability calibration."""
+
+from __future__ import annotations
+
+from datetime import datetime, timezone
 from pathlib import Path
-import re
 
 import joblib
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.isotonic import IsotonicRegression
 from sklearn.model_selection import train_test_split
 
 from src.ml.evaluate import ModelEvaluator
+from src.ml.calibrated_model import CalibratedRiskModel
 
 
 class CardioModelTrainer:
@@ -14,102 +19,54 @@ class CardioModelTrainer:
 
     def __init__(self, config):
         self.config = config
-        self.test_size = config.get("TRAIN_TEST_SPLIT_RATIO", 0.2)
-        self.base_random_state = config.get("RANDOM_STATE", 42)
-        self.model_output_dir = Path(config.get("MODEL_OUTPUT_DIR", "data/feature/models"))
-        self.feature_columns = config.get("CARDIO_FEATURE_COLUMNS", [])
+        self.feature_columns = config["CARDIO_FEATURE_COLUMNS"]
+        self.model_output_dir = Path(config["MODEL_OUTPUT_DIR"])
+        self.random_state = config["RANDOM_STATE"]
+        self.test_size = config["TRAIN_TEST_SPLIT_RATIO"]
+        self.n_estimators = config["RANDOM_FOREST_TREES"]
+        self.targets = config["RISK_TARGETS"]
 
-    def train_multiple_rounds(self, dataframe, model_name, rounds, run_label, best_metric):
-        round_results = []
-        for round_index in range(1, rounds + 1):
-            round_results.append(
-                self.train_single_round(
-                    dataframe=dataframe,
-                    model_name=model_name,
-                    round_index=round_index,
-                    run_label=run_label,
-                )
+    def train(self, dataframe, run_label="phase1"):
+        results = {}
+        for target_name, target_column in self.targets.items():
+            results[target_name] = self._train_target(
+                dataframe=dataframe,
+                target_name=target_name,
+                target_column=target_column,
+                run_label=run_label,
             )
-
-        best_result = self._select_best_result(round_results, best_metric)
         return {
-            "model_name": model_name,
-            "strategy": "dual_random_forest",
-            "rounds": rounds,
-            "run_label": run_label or "",
-            "best_metric": best_metric,
-            "best_result": best_result,
-            "all_round_results": round_results,
+            "strategy": "two_independent_random_forests_with_isotonic_calibration",
+            "trained_at": datetime.now(timezone.utc).isoformat(),
+            "features": self.feature_columns,
+            "targets": results,
         }
 
-    def train_single_round(self, dataframe, model_name, round_index, run_label=""):
-        round_random_state = self.base_random_state + round_index - 1
+    def _train_target(self, dataframe, target_name, target_column, run_label):
         features = dataframe[self.feature_columns].copy()
-
-        heart_result = self._train_binary_target(
-            features=features,
-            target=dataframe["heart_risk"],
-            target_name="heart_risk",
-            model_name=f"{model_name}_heart",
-            round_index=round_index,
-            run_label=run_label,
-            round_random_state=round_random_state,
-        )
-        stroke_result = self._train_binary_target(
-            features=features,
-            target=dataframe["stroke_risk"],
-            target_name="stroke_risk",
-            model_name=f"{model_name}_stroke",
-            round_index=round_index,
-            run_label=run_label,
-            round_random_state=round_random_state,
-        )
-
-        combined_score = round(
-            (
-                heart_result["metrics"].get("roc_auc", 0)
-                + stroke_result["metrics"].get("roc_auc", 0)
-            )
-            / 2,
-            4,
-        )
-
-        return {
-            "round_index": round_index,
-            "round_random_state": round_random_state,
-            "model_name": model_name,
-            "run_label": run_label or "",
-            "combined_score": combined_score,
-            "heart_model_result": heart_result,
-            "stroke_model_result": stroke_result,
-        }
-
-    def _train_binary_target(
-        self, features, target, target_name, model_name, round_index, run_label, round_random_state
-    ):
+        target = dataframe[target_column].astype(int)
+        weights = dataframe["sample_weight"] if "sample_weight" in dataframe else None
         x_train, x_test, y_train, y_test = train_test_split(
             features,
             target,
             test_size=self.test_size,
-            random_state=round_random_state,
+            random_state=self.random_state,
             stratify=target,
         )
-
-        model = self._build_model(round_random_state)
-        model.fit(x_train, y_train)
+        weight_train = weights.loc[x_train.index] if weights is not None else None
+        estimator = self._build_model()
+        estimator.fit(x_train, y_train, sample_weight=weight_train)
+        raw_train_probability = estimator.predict_proba(x_train)[:, 1]
+        calibrator = IsotonicRegression(out_of_bounds="clip")
+        calibrator.fit(raw_train_probability, y_train)
+        model = CalibratedRiskModel(estimator, calibrator, self.feature_columns)
 
         predictions = model.predict(x_test)
-        probabilities = self._predict_probabilities(model, x_test)
+        probabilities = model.predict_proba(x_test)[:, 1]
         evaluator = ModelEvaluator()
         metrics = evaluator.evaluate_binary(y_test, predictions, probabilities)
-
-        run_id = self._build_run_id(
-            model_name=model_name,
-            run_label=run_label,
-            round_index=round_index,
-        )
+        run_id = self._build_run_id(target_name=target_name, run_label=run_label)
         model_path = self.save_model(model=model, run_id=run_id)
-
         return {
             "target_name": target_name,
             "run_id": run_id,
@@ -125,35 +82,15 @@ class CardioModelTrainer:
         joblib.dump(model, model_path)
         return model_path
 
-    def _build_model(self, round_random_state):
+    def _build_model(self):
         return RandomForestClassifier(
-            n_estimators=200,
+            n_estimators=self.n_estimators,
             max_depth=8,
-            random_state=round_random_state,
+            random_state=self.random_state,
+            class_weight="balanced_subsample",
         )
 
-    def _predict_probabilities(self, model, features):
-        if hasattr(model, "predict_proba"):
-            return model.predict_proba(features)[:, 1]
-        return None
-
-    def _build_run_id(self, model_name, run_label, round_index):
+    def _build_run_id(self, target_name, run_label):
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        normalized_label = self._normalize_run_label(run_label)
-        if normalized_label:
-            return f"{model_name}_{normalized_label}_round{round_index}_{timestamp}"
-        return f"{model_name}_round{round_index}_{timestamp}"
-
-    def _normalize_run_label(self, run_label):
-        if not run_label:
-            return ""
-        normalized = re.sub(r"[^0-9A-Za-z_-]+", "_", run_label.strip())
-        return normalized.strip("_")
-
-    def _select_best_result(self, round_results, best_metric):
-        def metric_value(result):
-            if best_metric == "roc_auc":
-                return result.get("combined_score", 0)
-            return result.get("combined_score", 0)
-
-        return max(round_results, key=metric_value)
+        normalized_label = (run_label or "phase1").strip().replace(" ", "_")
+        return f"random_forest_{target_name}_{normalized_label}_{timestamp}"

@@ -5,10 +5,20 @@ import pandas as pd
 class CardioRiskPredictor:
     """Loads trained heart and stroke models and predicts dual risk outputs."""
 
-    def predict(self, heart_model_path, stroke_model_path, sample):
-        heart_model = joblib.load(heart_model_path)
-        stroke_model = joblib.load(stroke_model_path)
-        sample_frame = self._build_sample_frame(sample)
+    def predict(self, model_paths_or_heart_path, stroke_model_path=None, sample=None):
+        if isinstance(model_paths_or_heart_path, dict):
+            model_paths = model_paths_or_heart_path
+            payload = sample if sample is not None else stroke_model_path
+        else:
+            model_paths = {
+                "heart": model_paths_or_heart_path,
+                "stroke": stroke_model_path,
+            }
+            payload = sample
+
+        heart_model = joblib.load(model_paths["heart"])
+        stroke_model = joblib.load(model_paths["stroke"])
+        sample_frame = self._build_sample_frame(payload)
 
         heart_label = int(heart_model.predict(sample_frame)[0])
         stroke_label = int(stroke_model.predict(sample_frame)[0])

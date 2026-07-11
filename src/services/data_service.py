@@ -14,7 +14,7 @@ class DataService:
         self.config = config
         self.dataset_path = config.get("DATASET_FILE_PATH", "")
         self.dataset_encoding = config.get("DATASET_ENCODING", "utf-8")
-        self.dataset_separator = config.get("DATASET_SEPARATOR", ";")
+        self.dataset_separator = config.get("DATASET_SEPARATOR", ",")
         self.distributed_mode_enabled = config.get("DISTRIBUTED_MODE_ENABLED", False)
         self.staging_data_path = config.get("STAGING_DATA_PATH", "")
         self.feature_data_path = config.get("FEATURE_DATA_PATH", "")
@@ -22,7 +22,9 @@ class DataService:
         self.hdfs_staging_path = config.get("HDFS_STAGING_PATH", "")
         self.hdfs_feature_path = config.get("HDFS_FEATURE_PATH", "")
         self.feature_columns = config.get("CARDIO_FEATURE_COLUMNS", [])
-        self.target_column = config.get("CARDIO_TARGET_COLUMN", "cardio")
+        self.target_column = config.get("CARDIO_TARGET_COLUMN", "target_disease")
+        self.heart_label_column = config.get("HEART_LABEL_COLUMN", "label_heart")
+        self.stroke_label_column = config.get("STROKE_LABEL_COLUMN", "label_stroke")
         self.test_size = config.get("TRAIN_TEST_SPLIT_RATIO", 0.2)
         self.random_state = config.get("RANDOM_STATE", 42)
 
@@ -77,10 +79,7 @@ class DataService:
             }
 
         dataframe = self.load_dataset()
-        validator = DatasetValidator(
-            required_columns=self.feature_columns + [self.target_column]
-        )
-        validation_result = validator.validate_columns(dataframe.columns.tolist())
+        validation_result = self._validate_training_columns(dataframe.columns.tolist())
         if not validation_result["valid"]:
             return {
                 **profile,
@@ -109,10 +108,7 @@ class DataService:
             raise FileNotFoundError("Dataset file is not configured or does not exist.")
 
         dataframe = self.load_dataset()
-        validator = DatasetValidator(
-            required_columns=self.feature_columns + [self.target_column]
-        )
-        validation_result = validator.validate_columns(dataframe.columns.tolist())
+        validation_result = self._validate_training_columns(dataframe.columns.tolist())
         if not validation_result["valid"]:
             raise ValueError(
                 f"Dataset validation failed. Missing columns: {validation_result['missing_columns']}"
@@ -125,6 +121,29 @@ class DataService:
             random_state=self.random_state,
         )
         return engineer.build_training_dataframe(dataframe)
+
+    def _validate_training_columns(self, columns):
+        base_validation = DatasetValidator(required_columns=self.feature_columns).validate_columns(
+            columns
+        )
+        if not base_validation["valid"]:
+            return base_validation
+
+        has_legacy_target = self.target_column in columns
+        has_split_targets = (
+            self.heart_label_column in columns and self.stroke_label_column in columns
+        )
+        if has_legacy_target or has_split_targets:
+            return {"valid": True, "missing_columns": []}
+
+        return {
+            "valid": False,
+            "missing_columns": [
+                self.target_column,
+                self.heart_label_column,
+                self.stroke_label_column,
+            ],
+        }
 
     def _load_distributed_feature_dataframe(self):
         if self.hdfs_feature_path:

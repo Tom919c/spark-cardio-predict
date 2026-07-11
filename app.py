@@ -9,7 +9,7 @@ app = create_app()
 
 
 def open_browser():
-    url = "http://127.0.0.1:5000/dashboard"
+    url = f"http://{app.config['HOST']}:{app.config['PORT']}/dashboard"
     try:
         os.startfile(url)
     except AttributeError:
@@ -18,4 +18,9 @@ def open_browser():
 
 if __name__ == "__main__":
     threading.Timer(1.5, open_browser).start()
-    app.run(host="0.0.0.0", port=5000, debug=True, use_reloader=False)
+    app.run(
+        host=app.config["HOST"],
+        port=app.config["PORT"],
+        debug=app.config.get("DEBUG", False),
+        use_reloader=False,
+    )
