@@ -1,4 +1,6 @@
-def build_risk_interpretation(sample, heart_probability, stroke_probability, final_category):
+def build_risk_interpretation(
+    sample, heart_probability, stroke_probability, final_category, risk_level=None
+):
     """Builds readable explanations for the dual-model output."""
 
     highlights = []
@@ -20,8 +22,14 @@ def build_risk_interpretation(sample, heart_probability, stroke_probability, fin
     if not highlights:
         highlights.append("当前主要指标整体相对平稳，未见明显高危特征")
 
+    level_code = risk_level.get("code", 1) if isinstance(risk_level, dict) else 1
     summary = {
-        0: "当前评估为健康状态，未发现明显心脏或脑卒中高风险信号。",
+        0: (
+            "当前两项独立模型均未达到组合高风险阈值，综合风险处于关注范围，"
+            "建议继续管理危险因素。"
+            if level_code > 1
+            else "当前评估为健康状态，未发现明显心脏或脑卒中高风险信号。"
+        ),
         1: "当前评估更偏向心脏负面事件风险，需要重点关注心脏相关危险因素。",
         2: "当前评估更偏向脑卒中风险，需要重点关注脑血管相关危险因素。",
         3: "当前评估提示心脏和脑卒中双重风险，建议尽快进行系统性检查与干预。",

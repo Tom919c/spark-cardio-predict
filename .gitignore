@@ -1,8 +1,7 @@
 # Local project material
-mydocs/
-data/
 .env
-
+data/raw/
+data/features/
 # Python
 # Ignore caches at every directory level, including caches created by tests.
 __pycache__/

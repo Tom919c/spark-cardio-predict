@@ -8,6 +8,18 @@ class TrainingResultRecorder:
     def __init__(self, output_path="docs/training_results.md"):
         self.output_path = Path(output_path)
 
+    @staticmethod
+    def _display_model_path(model_path):
+        """训练记录只保存仓库内相对路径，避免泄露本机目录。"""
+        path = Path(model_path)
+        if not path.is_absolute():
+            return path.as_posix()
+        project_root = Path(__file__).resolve().parents[2]
+        try:
+            return path.resolve().relative_to(project_root.resolve()).as_posix()
+        except ValueError:
+            return path.name
+
     def append_multi_round_result(self, training_result):
         self.output_path.parent.mkdir(parents=True, exist_ok=True)
         if not self.output_path.exists():
@@ -27,9 +39,13 @@ class TrainingResultRecorder:
                     [
                         f"\n### {target_name}\n",
                         f"- Run ID: `{target_result.get('run_id', '')}`\n",
-                        f"- Model Path: `{target_result.get('model_path', '')}`\n",
+                        f"- Model Path: `{self._display_model_path(target_result.get('model_path', ''))}`\n",
                         f"- Accuracy: `{metrics.get('accuracy', '')}`\n",
                         f"- F1 Score: `{metrics.get('f1_score', '')}`\n",
+                        f"- F2 Score: `{metrics.get('f2_score', '')}`\n",
+                        f"- PR AUC: `{metrics.get('pr_auc', '')}`\n",
+                        f"- Recall: `{metrics.get('recall', '')}`\n",
+                        f"- Specificity: `{metrics.get('specificity', '')}`\n",
                         f"- ROC AUC: `{metrics.get('roc_auc', '')}`\n",
                     ]
                 )

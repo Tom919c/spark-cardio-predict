@@ -9,10 +9,11 @@ import pandas as pd
 class CalibratedRiskModel:
     """Combines a random forest with an isotonic probability calibrator."""
 
-    def __init__(self, estimator, calibrator, feature_columns):
+    def __init__(self, estimator, calibrator, feature_columns, decision_threshold=0.5):
         self.estimator = estimator
         self.calibrator = calibrator
         self.feature_columns = list(feature_columns)
+        self.decision_threshold = float(decision_threshold)
 
     def predict_proba(self, features):
         frame = self._feature_frame(features)
@@ -20,8 +21,11 @@ class CalibratedRiskModel:
         calibrated_probability = self.calibrator.predict(raw_probability)
         return np.column_stack((1 - calibrated_probability, calibrated_probability))
 
-    def predict(self, features, threshold=0.5):
-        return (self.predict_proba(features)[:, 1] >= threshold).astype(int)
+    def predict(self, features, threshold=None):
+        selected_threshold = (
+            self.decision_threshold if threshold is None else float(threshold)
+        )
+        return (self.predict_proba(features)[:, 1] >= selected_threshold).astype(int)
 
     @property
     def feature_importances_(self):

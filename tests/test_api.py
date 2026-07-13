@@ -48,8 +48,12 @@ def test_risk_predict_rejects_incomplete_payload():
     assert response.get_json()["success"] is False
 
 
-def test_risk_predict_reports_unavailable_models():
-    app = create_app()
+def test_risk_predict_reports_unavailable_models(tmp_path):
+    class TestConfig(BaseConfig):
+        MODEL_OUTPUT_DIR = str(tmp_path)
+        MODEL_MANIFEST_PATH = str(tmp_path / "active_models.json")
+
+    app = create_app(TestConfig)
     response = app.test_client().post(
         "/api/risk/predict",
         json={"age": 70, "gender": 1, "bmi": 31, "cholesterol": 3,
@@ -60,6 +64,19 @@ def test_risk_predict_reports_unavailable_models():
     assert response.status_code == 400
     assert response.get_json()["success"] is False
     assert "模型" in response.get_json()["message"]
+
+
+def test_risk_predict_rejects_invalid_values():
+    app = create_app()
+    response = app.test_client().post(
+        "/api/risk/predict",
+        json={"age": 120, "gender": 1, "bmi": 31, "cholesterol": 3,
+              "diabetes": 1, "hypertension": 1, "smoker": 2,
+              "alcohol": 1, "exercise": 0},
+    )
+
+    assert response.status_code == 400
+    assert "字段取值无效" in response.get_json()["message"]
 
 
 def test_risk_predict_returns_two_probabilities(tmp_path):
@@ -90,3 +107,14 @@ def test_risk_predict_returns_two_probabilities(tmp_path):
     assert "combined_shap_summary" in data
     assert data["heart_predicted_probability"] >= 0
     assert data["stroke_predicted_probability"] >= 0
+    assert data["intervention_plan"]["risk_level"]["code"] in {1, 2, 3, 4, 5}
+
+
+def test_train_estimate_reports_missing_dataset_clearly(tmp_path):
+    class TestConfig(BaseConfig):
+        DATASET_FILE_PATH = str(tmp_path / "missing.csv")
+
+    response = create_app(TestConfig).test_client().get("/api/risk/train-estimate")
+
+    assert response.status_code == 400
+    assert "Dataset" in response.get_json()["message"]

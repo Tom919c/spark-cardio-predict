@@ -38,3 +38,16 @@ def test_legacy_target_disease_is_mapped_to_two_labels():
 
     assert result.loc[0, "label_heart"] == 1
     assert result.loc[0, "label_stroke"] == 0
+
+
+def test_evaluator_exposes_imbalance_metrics():
+    from src.ml.evaluate import ModelEvaluator
+
+    result = ModelEvaluator().evaluate_binary(
+        [0, 0, 1, 1], [0, 1, 1, 1], [0.1, 0.4, 0.8, 0.9]
+    )
+
+    assert "pr_auc" in result
+    assert "f2_score" in result
+    assert "specificity" in result
+    assert result["recall"] == 1.0

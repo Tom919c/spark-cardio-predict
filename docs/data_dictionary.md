@@ -1,6 +1,6 @@
 # CVD_Standard_DWD 字段说明
 
-默认训练数据：`data/dwd/CVD_Standard_DWD.csv`，共 646,097 条记录、11 个字段。数据由 `data/ods/source_dataset/` 的 6 个异构原始数据集清洗、对齐和插补得到。
+默认训练数据：`data/raw/CVD_Standard_DWD.csv`，共 646,097 条记录、11 个字段。数据由 `data/raw/source_dataset/` 的异构原始数据集清洗、对齐和插补得到。
 
 | 字段 | 类型 | 说明 |
 | --- | --- | --- |

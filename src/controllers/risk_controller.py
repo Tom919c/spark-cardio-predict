@@ -36,6 +36,16 @@ def train_risk_model():
     return success_response(message="心脏事件与卒中双模型训练完成。", data=result)
 
 
+@risk_bp.route("/train-estimate")
+def estimate_training_time():
+    """在正式训练前返回基于当前数据和机器的耗时估算。"""
+    try:
+        result = RiskService(current_app.config).estimate_training_time()
+    except (ValueError, FileNotFoundError) as exc:
+        return error_response(message=str(exc), code=400)
+    return success_response(message=result["message"], data=result)
+
+
 @risk_bp.route("/predict", methods=["POST"])
 def predict_single_risk():
     service = RiskService(current_app.config)

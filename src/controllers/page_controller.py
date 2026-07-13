@@ -28,3 +28,8 @@ def shap_analysis_page():
 @pages_bp.route("/result-report")
 def result_report_page():
     return render_template("result_report.html")
+
+
+@pages_bp.route("/favicon.ico")
+def favicon():
+    return "", 204

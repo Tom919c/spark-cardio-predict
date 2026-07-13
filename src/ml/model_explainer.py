@@ -43,8 +43,9 @@ class ModelExplainer:
         sample_frame = self._build_sample_frame(sample)
 
         try:
-            if self._is_tree_model(model):
-                explainer = shap.TreeExplainer(model)
+            explainable_model = getattr(model, "estimator", model)
+            if self._is_tree_model(explainable_model):
+                explainer = shap.TreeExplainer(explainable_model)
                 shap_values = explainer.shap_values(sample_frame)
             else:
                 explainer = shap.Explainer(model, sample_frame)

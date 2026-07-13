@@ -8,14 +8,17 @@ class CardioRiskPredictor:
     """加载已训练的双模型，对单样本执行预测。"""
 
     def predict(self, model_paths, sample):
-        heart_model = joblib.load(model_paths["heart"])
-        stroke_model = joblib.load(model_paths["stroke"])
-        sample_frame = self._build_sample_frame(sample)
+        try:
+            heart_model = joblib.load(model_paths["heart"])
+            stroke_model = joblib.load(model_paths["stroke"])
+            sample_frame = self._build_sample_frame(sample)
 
-        heart_label = int(heart_model.predict(sample_frame)[0])
-        stroke_label = int(stroke_model.predict(sample_frame)[0])
-        heart_probability = self._predict_probability(heart_model, sample_frame)
-        stroke_probability = self._predict_probability(stroke_model, sample_frame)
+            heart_label = int(heart_model.predict(sample_frame)[0])
+            stroke_label = int(stroke_model.predict(sample_frame)[0])
+            heart_probability = self._predict_probability(heart_model, sample_frame)
+            stroke_probability = self._predict_probability(stroke_model, sample_frame)
+        except (KeyError, OSError, EOFError, ImportError, ValueError, AttributeError) as exc:
+            raise ValueError("模型文件无法加载或与当前特征契约不兼容，请重新训练。") from exc
 
         return {
             "heart_predicted_label": heart_label,

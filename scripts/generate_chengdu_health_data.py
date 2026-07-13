@@ -12,7 +12,7 @@ import pandas as pd
 
 DEFAULT_ROWS = 2_000_000
 DEFAULT_SEED = 20260711
-DEFAULT_OUTPUT = Path("data/dws/chengdu_resident_health_simulated.csv")
+DEFAULT_OUTPUT = Path("data/raw/chengdu_resident_health_simulated.csv")
 
 DISTRICTS = [
     "锦江区",
@@ -287,7 +287,7 @@ def generate_dataset(rows: int, seed: int, output: Path, chunk_size: int) -> dic
         "rows": int(len(validation)),
         "columns": validation.columns.tolist(),
         "seed": seed,
-        "source_document": "mydocs/成都市居民健康状况.md",
+        "source_document": "mydocs/成都居民健康数据.md",
         "base_rates": BASE_RATES,
         "observed_rates": {
             "hypertension": round(float(validation["hypertension"].mean()), 6),

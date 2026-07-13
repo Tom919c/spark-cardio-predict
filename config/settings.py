@@ -66,12 +66,20 @@ class BaseConfig:
         os.getenv("DATASET_FILE_PATH", "data/raw/CVD_Standard_DWD.csv")
     )
     POPULATION_DATASET_PATH = _project_path(
-        os.getenv("POPULATION_DATASET_PATH", "data/chengdu_resident_health_simulated.csv")
+        os.getenv(
+            "POPULATION_DATASET_PATH",
+            "data/raw/chengdu_resident_health_simulated.csv",
+        )
     )
     STAGING_DATA_PATH = _project_path("data/raw/CVD_Standard_DWD.csv")
     FEATURE_DATA_PATH = _project_path("data/features/cardio_features.csv")
     MODEL_OUTPUT_DIR = _project_path(os.getenv("MODEL_OUTPUT_DIR", "data/models"))
-    MODEL_MANIFEST_PATH = _project_path("data/models/active_models.json")
+    MODEL_MANIFEST_PATH = _project_path(
+        os.getenv("MODEL_MANIFEST_PATH", "data/models/active_models.json")
+    )
+    TRAINING_RESULTS_PATH = _project_path(
+        os.getenv("TRAINING_RESULTS_PATH", "docs/training_results.md")
+    )
     DATASET_ENCODING = os.getenv("DATASET_ENCODING", "utf-8")
     DATASET_SEPARATOR = os.getenv("DATASET_SEPARATOR", ",")
 
@@ -115,6 +123,9 @@ class BaseConfig:
     TRAIN_TEST_SPLIT_RATIO = _as_float("TRAIN_TEST_SPLIT_RATIO", 0.2)
     RANDOM_STATE = _as_int("RANDOM_STATE", 42)
     RANDOM_FOREST_TREES = _as_int("RANDOM_FOREST_TREES", 200)
+    MINORITY_OVERSAMPLE_RATIO = _as_float("MINORITY_OVERSAMPLE_RATIO", 0.15)
+    MINORITY_MAX_MULTIPLIER = _as_float("MINORITY_MAX_MULTIPLIER", 3.0)
+    STROKE_MIN_RECALL = _as_float("STROKE_MIN_RECALL", 0.70)
 
     # 阶段一固定为两个独立事件模型，不在此处扩展额外疾病类型。
     RISK_TARGETS = {

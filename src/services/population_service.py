@@ -57,9 +57,11 @@ class PopulationService:
             + screened["diabetes"]
             + (screened["cholesterol"] >= 2).astype(int)
         )
-        return screened.sort_values(["risk_score", "age"], ascending=False).head(limit).to_dict(
-            orient="records"
-        )
+        result = screened.sort_values(["risk_score", "age"], ascending=False).head(limit)
+        records = result.to_dict(orient="records")
+        for record in records:
+            record["screening_basis"] = "年龄>=65 且仿真双风险标签至少一项为 1"
+        return records
 
     @property
     def _dataframe(self):
@@ -76,12 +78,17 @@ class PopulationService:
                 return cached[1]
 
             # 分块读取并只保留大屏列，避免一次加载大量行占用过多内存。
-            chunks = pd.read_csv(
-                self.population_path,
-                usecols=self.REQUIRED_COLUMNS,
-                chunksize=250_000,
-            )
-            dataframe = pd.concat(chunks, ignore_index=True)
+            try:
+                chunks = pd.read_csv(
+                    self.population_path,
+                    usecols=self.REQUIRED_COLUMNS,
+                    chunksize=250_000,
+                )
+                dataframe = pd.concat(chunks, ignore_index=True)
+            except (OSError, ValueError) as exc:
+                raise ValueError(
+                    "仿真数据读取失败或字段不完整，请重新生成成都居民数据。"
+                ) from exc
             self._dataframe_cache[cache_key] = (cache_version, dataframe)
             return dataframe
 

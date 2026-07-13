@@ -14,6 +14,8 @@ def dashboard_analysis():
         data = PopulationService(current_app.config).dashboard()
     except FileNotFoundError as exc:
         return error_response(message=str(exc), code=404)
+    except ValueError as exc:
+        return error_response(message=str(exc), code=400)
     return success_response(message="群体健康分析获取成功。", data=data)
 
 
@@ -24,4 +26,6 @@ def follow_up_analysis():
         data = PopulationService(current_app.config).follow_up_list(limit=limit)
     except FileNotFoundError as exc:
         return error_response(message=str(exc), code=404)
+    except ValueError as exc:
+        return error_response(message=str(exc), code=400)
     return success_response(message="重点随访名单获取成功。", data=data)

@@ -16,20 +16,24 @@ class ModelRegistry:
         self.feature_columns = list(feature_columns or [])
 
     def load_active_models(self) -> dict:
-        """读取清单并解析模型路径；清单不存在时尝试从已有模型文件引导。"""
+        """只读加载已登记模型，清单不存在时明确返回未就绪。"""
         if not self.manifest_path.exists():
-            bootstrapped = self._bootstrap_from_existing_models()
-            if bootstrapped:
-                return bootstrapped
             raise FileNotFoundError("未找到模型清单，请先完成训练。")
 
-        manifest = json.loads(self.manifest_path.read_text(encoding="utf-8"))
+        try:
+            manifest = json.loads(self.manifest_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            raise FileNotFoundError("模型清单无法读取，请重新训练。") from exc
         if manifest.get("version") != 2:
             raise FileNotFoundError("模型清单版本过旧，请重新训练。")
         if self.feature_columns and manifest.get("feature_columns") != self.feature_columns:
             raise FileNotFoundError("模型清单与当前特征契约不一致，请重新训练。")
 
         models = manifest.get("models", {})
+        if not isinstance(models, dict):
+            raise FileNotFoundError("模型清单格式错误，请重新训练。")
+        if not all(isinstance(models.get(name), str) and models.get(name) for name in ("heart", "stroke")):
+            raise FileNotFoundError("模型清单缺少心脏事件或卒中模型，请重新训练。")
         resolved = {
             name: str(self._resolve_artifact_path(path))
             for name, path in models.items()
@@ -66,20 +70,9 @@ class ModelRegistry:
             raise ValueError("模型文件必须位于模型注册表目录内。") from None
 
     def _resolve_artifact_path(self, path: str) -> Path:
+        if not isinstance(path, str) or not path:
+            raise FileNotFoundError("模型文件路径为空，请重新训练。")
         artifact = Path(path)
         if not artifact.is_absolute():
             artifact = self.manifest_path.parent / artifact
         return artifact.resolve()
-
-    def _bootstrap_from_existing_models(self) -> dict | None:
-        """清单不存在时，从目录中已有的模型文件自动生成清单。"""
-        heart = sorted(self.model_dir.glob("random_forest_heart_*.joblib"))
-        stroke = sorted(self.model_dir.glob("random_forest_stroke_*.joblib"))
-        if not heart or not stroke:
-            return None
-        models = {
-            "heart": str(heart[-1].resolve()),
-            "stroke": str(stroke[-1].resolve()),
-        }
-        self.register(models, metrics={})
-        return models

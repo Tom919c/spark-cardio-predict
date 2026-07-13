@@ -21,7 +21,9 @@ class RiskService:
     def __init__(self, config):
         self.config = config
         self.data_service = DataService(config)
-        self.training_recorder = TrainingResultRecorder()
+        self.training_recorder = TrainingResultRecorder(
+            config.get("TRAINING_RESULTS_PATH", "docs/training_results.md")
+        )
         self.intervention_service = InterventionService()
         self.model_explainer = ModelExplainer()
         self.feature_columns = config.get("CARDIO_FEATURE_COLUMNS", [])
@@ -68,12 +70,22 @@ class RiskService:
         self.training_recorder.append_multi_round_result(result)
         return result
 
+    def estimate_training_time(self):
+        """读取训练数据并执行小样本基准，不写入模型文件。"""
+        dataframe = self.data_service.get_training_dataframe()
+        return CardioModelTrainer(self.config).estimate(dataframe)
+
     def predict_risk(self, sample):
         """对单样本执行双模型预测，返回概率、风险分级、SHAP 解释和干预方案。"""
         validator = PredictionInputValidator(required_fields=self.feature_columns)
         validation = validator.validate_payload(sample)
         if not validation["valid"]:
-            raise ValueError(f"缺少必填字段: {validation['missing_fields']}")
+            details = []
+            if validation["missing_fields"]:
+                details.append(f"缺少必填字段: {validation['missing_fields']}")
+            if validation["invalid_fields"]:
+                details.append(f"字段取值无效: {validation['invalid_fields']}")
+            raise ValueError("；".join(details))
 
         normalised_sample = self._normalise_sample(sample)
         # 模型路径只由后端清单管理，不接受外部传入。
@@ -105,17 +117,18 @@ class RiskService:
             heart_probability=prediction["heart_predicted_probability"],
             stroke_probability=prediction["stroke_predicted_probability"],
             final_category=final_category,
+            risk_level=risk_level,
         )
         intervention_plan = InterventionPlan(
-            risk_level=final_category,
+            risk_level=risk_level,
             suggestions=self.intervention_service.build_plan(
-                normalised_sample, final_category
+                normalised_sample, risk_level
             )["suggestions"],
         )
 
         risk_result = RiskResult(
             predicted_label=final_category,
-            risk_level=final_category,
+            risk_level=risk_level,
             model_path="dual_model",
             risk_summary=interpretation["risk_summary"],
             indicator_insights=build_indicator_insights(normalised_sample),
@@ -124,8 +137,6 @@ class RiskService:
         )
         result = risk_result.to_dict()
         result["required_fields"] = self.feature_columns
-        result["heart_model_path"] = model_paths["heart"]
-        result["stroke_model_path"] = model_paths["stroke"]
         result["heart_predicted_label"] = prediction["heart_predicted_label"]
         result["stroke_predicted_label"] = prediction["stroke_predicted_label"]
         result["heart_predicted_probability"] = prediction["heart_predicted_probability"]
@@ -227,7 +238,11 @@ class RiskService:
             models = self.registry.load_active_models()
         except FileNotFoundError:
             return {"ready": False, "models": {}}
-        return {"ready": True, "models": models}
+        return {
+            "ready": True,
+            "models": {name: model_path.rsplit("\\", 1)[-1].rsplit("/", 1)[-1]
+                       for name, model_path in models.items()},
+        }
 
     @staticmethod
     def _normalise_sample(sample):

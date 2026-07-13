@@ -452,15 +452,15 @@
         <div class="stat-sub">占筛查总人数 <span id="highRiskPct">--</span></div>
       </div>
     </div>
-    <!-- 平均发病概率 -->
+    <!-- 双风险标签率 -->
     <div class="stat-card stat-card-enter" style="animation-delay:0.3s;">
       <div class="stat-icon icon-orange">
         <svg viewBox="0 0 24 24" fill="none" stroke="#FF7D00" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
       </div>
       <div class="stat-body">
-        <div class="stat-label">平均发病概率</div>
+        <div class="stat-label">双风险标签率</div>
         <div class="stat-value" id="statAvgProb">--</div>
-        <div class="stat-sub">基于Spark ML模型评估</div>
+        <div class="stat-sub">基于成都仿真标签聚合</div>
       </div>
     </div>
     <!-- 待随访人数 -->
@@ -500,9 +500,9 @@
     <!-- ======== 中间核心区 ======== -->
     <div class="col-span-12 xl:col-span-6 flex flex-col gap-3 md:gap-4">
 
-      <!-- 全国风险热力地图 -->
+      <!-- 四川省风险热力地图 -->
       <div class="dash-card anim-enter" style="animation-delay:0.15s;">
-        <div class="card-title"><span class="accent-dot"></span>全国心脑血管疾病风险热力地图</div>
+        <div class="card-title"><span class="accent-dot"></span>四川省心脑血管疾病风险热力地图</div>
         <div id="mapChart" class="chart-container" style="height:380px;"></div>
       </div>
 
@@ -517,9 +517,9 @@
     <!-- ======== 右侧栏 ======== -->
     <div class="col-span-12 xl:col-span-3 flex flex-col gap-3 md:gap-4">
 
-      <!-- 模型特征重要性 -->
+      <!-- 群体危险因素占比 -->
       <div class="dash-card anim-enter-left" style="animation-delay:0.3s;">
-        <div class="card-title"><span class="accent-dot"></span>特征重要性 Top10</div>
+        <div class="card-title"><span class="accent-dot"></span>群体危险因素占比</div>
         <div id="featureChart" class="chart-container" style="height:280px;"></div>
       </div>
 
@@ -534,7 +534,7 @@
                   <th>姓名</th>
                   <th>年龄</th>
                   <th>所属社区</th>
-                  <th>发病概率</th>
+                  <th>筛查评分</th>
                   <th>风险等级</th>
                   <th>随访提示</th>
                 </tr>
@@ -1039,7 +1039,7 @@
         '<td>' + row.name + '</td>' +
         '<td>' + row.age + '</td>' +
         '<td>' + row.community + '</td>' +
-         '<td>' + Number(row.probability || 0).toFixed(1) + '%</td>' +
+         '<td>' + Number(row.screening_score || 0).toFixed(0) + '/5</td>' +
         '<td>' + getRiskTagHTML(row.risk_level) + '</td>' +
         '<td style="color:' + (row.risk_level >= 4 ? '#F53F3F' : '#FFB400') + ';font-size:11px;">' + row.followup_note + '</td>' +
         '</tr>';
@@ -1092,13 +1092,13 @@
       renderFeatureImportance(preprocess.feature_importance);
       renderAgePyramid(preprocess.age_pyramid);
        renderFollowUpTable((Array.isArray(followUps) ? followUps : []).map(function(row, index) {
-         var probability = Math.min(99.9, Number(row.risk_score || 0) / 5 * 100);
-        var level = valueToRiskLevel(probability);
+        var screeningScore = Math.min(5, Math.max(0, Number(row.risk_score || 0)));
+        var level = valueToRiskLevel(screeningScore / 5 * 100);
         return {
           name: '居民' + String(index + 1).padStart(3, '0'),
           age: row.age,
           community: row.district,
-          probability: probability,
+          screening_score: screeningScore,
           risk_level: level,
           followup_note: level >= 4 ? '7日内重点随访' : '30日内常规随访'
         };
