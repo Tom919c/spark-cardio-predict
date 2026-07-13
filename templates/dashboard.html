@@ -1,0 +1,1199 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CardioSpark 心脑血管疾病智慧公卫决策大屏</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js">
+</script>
+<script src="https://cdn.jsdelivr.net/npm/echarts-wordcloud@2.1.0/dist/echarts-wordcloud.min.js">
+</script>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/page-switcher.css') }}">
+<style>
+  /* ===== 全局基础样式 ===== */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0F172A;
+    color: #E2E8F0;
+    font-family: 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif;
+    overflow-x: hidden;
+    min-height: 100vh;
+  }
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: #1E293B; border-radius: 2px; }
+  ::-webkit-scrollbar-thumb { background: #165DFF; border-radius: 2px; }
+
+  /* ===== 卡片通用 ===== */
+  .dash-card {
+    background: linear-gradient(135deg, rgba(30,41,59,0.9), rgba(15,23,42,0.95));
+    border: 1px solid rgba(22,93,255,0.15);
+    border-radius: 12px;
+    padding: 16px 20px;
+    backdrop-filter: blur(4px);
+    position: relative;
+    overflow: hidden;
+  }
+  .dash-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #165DFF, transparent);
+    opacity: 0.6;
+  }
+  .card-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #94A3B8;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card-title .accent-dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    background: #165DFF;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* ===== 入场动画 ===== */
+  @keyframes fadeSlideUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeSlideIn {
+    from { opacity: 0; transform: translateX(-12px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes pulseGlow {
+    0%, 100% { box-shadow: 0 0 8px rgba(22,93,255,0.3); }
+    50% { box-shadow: 0 0 20px rgba(22,93,255,0.6); }
+  }
+  .anim-enter { animation: fadeSlideUp 0.7s ease-out forwards; }
+  .anim-enter-left { animation: fadeSlideIn 0.6s ease-out forwards; }
+  .stat-card-enter { animation: fadeSlideUp 0.5s ease-out forwards; }
+
+  /* ===== 统计数字动画 ===== */
+  @keyframes countUp {
+    from { opacity: 0; transform: scale(0.8); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .stat-value {
+    animation: countUp 0.6s ease-out forwards;
+  }
+
+  /* ===== 表格 ===== */
+  .followup-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  .followup-table thead th {
+    background: rgba(22,93,255,0.12);
+    color: #94A3B8;
+    font-weight: 500;
+    padding: 8px 6px;
+    text-align: left;
+    white-space: nowrap;
+    border-bottom: 1px solid rgba(22,93,255,0.2);
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+  .followup-table tbody td {
+    padding: 6px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    vertical-align: middle;
+  }
+  .followup-table tbody tr:hover {
+    background: rgba(22,93,255,0.08);
+  }
+  .followup-table tbody tr.row-extreme td {
+    background: rgba(245,63,63,0.12);
+  }
+  .followup-table tbody tr.row-extreme:hover td {
+    background: rgba(245,63,63,0.2);
+  }
+  .table-wrapper {
+    max-height: 360px;
+    overflow-y: auto;
+    margin-top: 4px;
+  }
+
+  /* ===== 风险标签 ===== */
+  .risk-tag {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+  .risk-tag.level-1 { background: rgba(0,181,120,0.2); color: #00B578; border: 1px solid rgba(0,181,120,0.3); }
+  .risk-tag.level-2 { background: rgba(20,201,201,0.2); color: #14C9C9; border: 1px solid rgba(20,201,201,0.3); }
+  .risk-tag.level-3 { background: rgba(255,180,0,0.2); color: #FFB400; border: 1px solid rgba(255,180,0,0.3); }
+  .risk-tag.level-4 { background: rgba(255,125,0,0.2); color: #FF7D00; border: 1px solid rgba(255,125,0,0.3); }
+  .risk-tag.level-5 { background: rgba(245,63,63,0.2); color: #F53F3F; border: 1px solid rgba(245,63,63,0.3); animation: pulseGlow 2s infinite; }
+
+  /* ===== 导航栏 ===== */
+  .top-nav {
+    background: linear-gradient(135deg, rgba(15,23,42,0.98), rgba(22,93,255,0.06));
+    border-bottom: 1px solid rgba(22,93,255,0.2);
+    padding: 12px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .nav-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    flex-shrink: 1;
+  }
+  .nav-brand .logo-icon {
+    width: 36px;
+    height: 36px;
+    background: linear-gradient(135deg, #165DFF, #3C7EFF);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 16px;
+    color: #fff;
+    flex-shrink: 0;
+  }
+  .nav-brand h1 {
+    font-size: 18px;
+    font-weight: 700;
+    background: linear-gradient(90deg, #E2E8F0, #60A5FA);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: 1px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .nav-info {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    font-size: 13px;
+    color: #94A3B8;
+    flex-shrink: 0;
+  }
+  .nav-info .info-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+  }
+  .nav-info .info-item svg { width: 16px; height: 16px; flex-shrink: 0; }
+  .nav-info .highlight-text { color: #60A5FA; font-weight: 500; }
+  .top-nav .page-switcher { margin-left: auto; margin-right: auto; }
+
+  /* ===== 统计卡片 ===== */
+  .stat-card {
+    background: linear-gradient(135deg, rgba(30,41,59,0.85), rgba(15,23,42,0.9));
+    border: 1px solid rgba(22,93,255,0.12);
+    border-radius: 10px;
+    padding: 18px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    transition: border-color 0.3s, box-shadow 0.3s;
+  }
+  .stat-card:hover,
+  .stat-card:active {
+    border-color: rgba(22,93,255,0.35);
+    box-shadow: 0 4px 20px rgba(22,93,255,0.12);
+  }
+  .stat-card .stat-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .stat-card .stat-icon.icon-blue { background: rgba(22,93,255,0.15); }
+  .stat-card .stat-icon.icon-red { background: rgba(245,63,63,0.15); }
+  .stat-card .stat-icon.icon-orange { background: rgba(255,125,0,0.15); }
+  .stat-card .stat-icon.icon-purple { background: rgba(130,80,223,0.15); }
+  .stat-card .stat-icon svg { width: 22px; height: 22px; }
+  .stat-card .stat-body { flex: 1; min-width: 0; }
+  .stat-card .stat-label { font-size: 12px; color: #94A3B8; margin-bottom: 4px; }
+  .stat-card .stat-value { font-size: 24px; font-weight: 700; color: #F1F5F9; }
+  .stat-card .stat-value.text-red { color: #F53F3F; }
+  .stat-card .stat-sub { font-size: 11px; color: #64748B; margin-top: 2px; }
+
+  /* ===== 图表容器 ===== */
+  .chart-container {
+    width: 100%;
+    height: 100%;
+    min-height: 180px;
+  }
+
+  /* ===== 加载占位动画 ===== */
+  @keyframes shimmer {
+    0% { background-position: -200px 0; }
+    100% { background-position: calc(200px + 100%) 0; }
+  }
+  .chart-loading {
+    background: linear-gradient(90deg, #1E293B 25%, #334155 50%, #1E293B 75%);
+    background-size: 200px 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 8px;
+  }
+
+  /* ================================================================ */
+  /* ===== 移动端响应式适配                                  ======  */
+  /* ===== 三档断点：768px(平板)、640px(大屏手机)、480px(小屏) =====  */
+  /* ================================================================ */
+  @media (max-width: 1023px) {
+    .top-nav { padding: 10px 16px; flex-wrap: wrap; }
+    .nav-brand h1 { font-size: 15px; max-width: 60vw; }
+    .nav-brand .logo-icon { width: 30px; height: 30px; font-size: 14px; }
+    .nav-info { gap: 14px; font-size: 12px; flex-wrap: wrap; }
+    .top-nav .page-switcher { order: 3; width: 100%; justify-content: center; margin: 2px auto 0; }
+    .stat-card { padding: 14px 16px; gap: 14px; }
+    .stat-card .stat-value { font-size: 20px; }
+    .stat-card .stat-icon { width: 38px; height: 38px; }
+    .stat-card .stat-icon svg { width: 19px; height: 19px; }
+    .dash-card { padding: 14px 16px; }
+    .card-title { font-size: 13px; }
+    #mapChart { height: 300px !important; }
+    #agePyramidChart { height: 240px !important; }
+    #featureChart { height: 250px !important; }
+    #radarChart { height: 230px !important; }
+    #wordCloudChart { height: 200px !important; }
+    .table-wrapper { max-height: 280px; }
+  }
+
+  @media (max-width: 767px) {
+    .top-nav { gap: 8px; }
+    .nav-brand h1 { font-size: 14px; max-width: 55vw; letter-spacing: 0; }
+    .nav-brand { gap: 8px; }
+    .nav-brand .logo-icon { width: 26px; height: 26px; font-size: 12px; border-radius: 6px; }
+    .nav-info { gap: 10px; font-size: 11px; width: 100%; justify-content: flex-start; }
+    .top-nav .page-switcher { margin-top: 0; }
+    .nav-info .info-item--ts-label,
+    .nav-info .info-item:last-child > span:first-of-type { display: none; }
+    .stat-card { padding: 10px 12px; gap: 10px; }
+    .stat-card .stat-value { font-size: 17px; }
+    .stat-card .stat-icon { width: 32px; height: 32px; border-radius: 8px; }
+    .stat-card .stat-icon svg { width: 16px; height: 16px; }
+    .stat-card .stat-label { font-size: 11px; }
+    .stat-card .stat-sub { font-size: 10px; }
+    .dash-card { padding: 10px 12px; border-radius: 10px; }
+    .dash-card::before { height: 1.5px; }
+    .card-title { font-size: 12px; margin-bottom: 8px; letter-spacing: 0; }
+    .card-title .accent-dot { width: 6px; height: 6px; }
+    .followup-table { font-size: 11px; }
+    .followup-table thead th,
+    .followup-table tbody td { padding: 5px 4px; }
+    .risk-tag { padding: 1px 8px; font-size: 10px; }
+    #mapChart { height: 260px !important; }
+    #agePyramidChart { height: 220px !important; }
+    #featureChart { height: 220px !important; }
+    #radarChart { height: 200px !important; }
+    #wordCloudChart { height: 180px !important; }
+    .table-wrapper { max-height: 240px; }
+  }
+
+  @media (max-width: 479px) {
+    .top-nav { 
+      flex-direction: column; align-items: stretch; 
+      padding: 8px 12px; 
+      gap: 6px;
+    }
+    .nav-brand h1 { font-size: 13px; max-width: none; }
+    .nav-info { 
+      gap: 6px; font-size: 10px; 
+      justify-content: space-between; 
+      flex-wrap: nowrap; 
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .nav-info .info-item:last-child > span:last-of-type { font-size: 10px; }
+    .nav-info .info-item svg { width: 12px; height: 12px; }
+    .nav-info .info-item { gap: 3px; }
+    .stat-card { padding: 8px 10px; gap: 8px; }
+    .stat-card .stat-value { font-size: 15px; }
+    .stat-card .stat-icon { width: 28px; height: 28px; }
+    .stat-card .stat-icon svg { width: 14px; height: 14px; }
+    .stat-card .stat-label { font-size: 10px; margin-bottom: 2px; }
+    .stat-card .stat-sub { font-size: 9px; }
+    .dash-card { padding: 8px 10px; border-radius: 8px; }
+    .card-title { font-size: 11px; margin-bottom: 6px; }
+    .followup-table { font-size: 10px; }
+    .followup-table thead th,
+    .followup-table tbody td { padding: 4px 3px; }
+    .risk-tag { padding: 1px 6px; font-size: 9px; }
+    #mapChart { height: 220px !important; }
+    #agePyramidChart { height: 200px !important; }
+    #featureChart { height: 200px !important; }
+    #radarChart { height: 180px !important; }
+    #wordCloudChart { height: 160px !important; }
+    .table-wrapper { max-height: 200px; }
+    main.p-4 { padding: 8px; }
+  }
+
+/* ===== 错误弹窗样式 ===== */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(15,23,42,0.6);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+  animation: fadeIn 0.25s ease-out;
+}
+.modal-overlay.hidden { display: none; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.modal-box {
+  background: #1E293B; border: 1px solid rgba(22,93,255,0.25);
+  border-radius: 14px; max-width: 400px; width: 100%;
+  padding: 28px 24px 20px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+  text-align: center;
+  animation: modalSlide 0.3s ease-out;
+}
+@keyframes modalSlide { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.modal-box .modal-icon {
+  width: 56px; height: 56px; border-radius: 50%;
+  background: rgba(245,63,63,0.2); color: #F53F3F;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 12px; font-size: 28px;
+}
+.modal-box .modal-title { font-size: 17px; font-weight: 700; color: #E2E8F0; margin-bottom: 6px; }
+.modal-box .modal-desc { font-size: 14px; color: #94A3B8; line-height: 1.6; margin-bottom: 18px; }
+.modal-box .modal-btn {
+  display: inline-block; padding: 10px 32px;
+  background: #165DFF; color: #fff; border: none;
+  border-radius: 8px; font-size: 15px; font-weight: 600;
+  cursor: pointer; font-family: inherit;
+  transition: background 0.2s;
+}
+.modal-box .modal-btn:hover { background: #3C7EFF; }
+
+</style>
+</head>
+<body>
+
+<!-- ============================================================ -->
+<!-- ==================== 顶部导航栏 ============================ -->
+<!-- ============================================================ -->
+<header class="top-nav anim-enter" style="animation-delay:0s;">
+  <div class="nav-brand">
+    <div class="logo-icon">CS</div>
+    <h1>CardioSpark 心脑血管疾病智慧决策平台</h1>
+  </div>
+  <nav class="page-switcher page-switcher--dark" aria-label="业务端切换">
+    <a class="page-switcher__link" href="{{ url_for('pages.dashboard_page') }}" aria-current="page" title="进入机构端工作台">
+      <svg class="page-switcher__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      <span>机构端工作台</span>
+    </a>
+    <a class="page-switcher__link" href="{{ url_for('pages.risk_report_page') }}" title="进入个人风险评估">
+      <svg class="page-switcher__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7" r="4"/><path d="M17 3.5a4 4 0 0 1 0 7"/></svg>
+      <span>个人风险评估</span>
+    </a>
+  </nav>
+  <div class="nav-info">
+    <span class="info-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      <span class="highlight-text" id="regionDisplay">成都市</span>
+    </span>
+    <span class="info-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <span id="clockDisplay">--:--:--</span>
+    </span>
+    <span class="info-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <span class="info-item--ts-label">数据更新：</span>
+      <span class="highlight-text" id="dataTimestamp">加载中...</span>
+    </span>
+  </div>
+</header>
+
+<!-- ============================================================ -->
+<!-- ==================== 主体内容区 ============================ -->
+<!-- ============================================================ -->
+<main class="p-4" style="max-width:1920px; margin:0 auto;">
+
+  <!-- ===== 数据概览卡片 ===== -->
+  <!-- 桌面4列 -> 平板2列 -> 手机2列(grid-cols-2) -> 小屏手机1列  -->
+  <section class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 md:gap-4 mb-3 md:mb-4" id="statsOverview">
+    <!-- 总筛查人数 -->
+    <div class="stat-card stat-card-enter" style="animation-delay:0.1s;">
+      <div class="stat-icon icon-blue">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#165DFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      </div>
+      <div class="stat-body">
+        <div class="stat-label">总筛查人数</div>
+        <div class="stat-value" id="statTotalScreening">--</div>
+        <div class="stat-sub">累计建档筛查</div>
+      </div>
+    </div>
+    <!-- 高危人群总数 -->
+    <div class="stat-card stat-card-enter" style="animation-delay:0.2s;">
+      <div class="stat-icon icon-red">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#F53F3F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
+      </div>
+      <div class="stat-body">
+        <div class="stat-label">高危人群总数</div>
+        <div class="stat-value text-red" id="statHighRisk">--</div>
+        <div class="stat-sub">占筛查总人数 <span id="highRiskPct">--</span></div>
+      </div>
+    </div>
+    <!-- 双风险标签率 -->
+    <div class="stat-card stat-card-enter" style="animation-delay:0.3s;">
+      <div class="stat-icon icon-orange">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#FF7D00" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+      </div>
+      <div class="stat-body">
+        <div class="stat-label">双风险标签率</div>
+        <div class="stat-value" id="statAvgProb">--</div>
+        <div class="stat-sub">基于成都仿真标签聚合</div>
+      </div>
+    </div>
+    <!-- 待随访人数 -->
+    <div class="stat-card stat-card-enter" style="animation-delay:0.4s;">
+      <div class="stat-icon icon-purple">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#8250DF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      </div>
+      <div class="stat-body">
+        <div class="stat-label">待随访人数</div>
+        <div class="stat-value" id="statPendingFollowup">--</div>
+        <div class="stat-sub">需7日内完成随访</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 三栏核心布局 ===== -->
+  <!-- 桌面 12col -> 平板/手机堆叠 -->
+  <section class="grid grid-cols-12 gap-3 md:gap-4" style="min-height:auto;">
+
+    <!-- ======== 左侧栏 ======== -->
+    <div class="col-span-12 xl:col-span-3 flex flex-col gap-3 md:gap-4">
+
+      <!-- 社区健康风险雷达图 -->
+      <div class="dash-card anim-enter-left" style="animation-delay:0.2s;">
+        <div class="card-title"><span class="accent-dot"></span>社区健康风险雷达图</div>
+        <div id="radarChart" class="chart-container" style="height:260px;"></div>
+      </div>
+
+      <!-- 社区核心危险因素词云 -->
+      <div class="dash-card anim-enter-left" style="animation-delay:0.3s;">
+        <div class="card-title"><span class="accent-dot"></span>核心危险因素分布</div>
+        <div id="wordCloudChart" class="chart-container" style="height:240px;"></div>
+      </div>
+
+    </div>
+
+    <!-- ======== 中间核心区 ======== -->
+    <div class="col-span-12 xl:col-span-6 flex flex-col gap-3 md:gap-4">
+
+      <!-- 四川省风险热力地图 -->
+      <div class="dash-card anim-enter" style="animation-delay:0.15s;">
+        <div class="card-title"><span class="accent-dot"></span>四川省心脑血管疾病风险热力地图</div>
+        <div id="mapChart" class="chart-container" style="height:380px;"></div>
+      </div>
+
+      <!-- 年龄风险金字塔 -->
+      <div class="dash-card anim-enter" style="animation-delay:0.25s;">
+        <div class="card-title"><span class="accent-dot"></span>年龄风险金字塔</div>
+        <div id="agePyramidChart" class="chart-container" style="height:280px;"></div>
+      </div>
+
+    </div>
+
+    <!-- ======== 右侧栏 ======== -->
+    <div class="col-span-12 xl:col-span-3 flex flex-col gap-3 md:gap-4">
+
+      <!-- 群体危险因素占比 -->
+      <div class="dash-card anim-enter-left" style="animation-delay:0.3s;">
+        <div class="card-title"><span class="accent-dot"></span>群体危险因素占比</div>
+        <div id="featureChart" class="chart-container" style="height:280px;"></div>
+      </div>
+
+      <!-- 高危随访人员表 -->
+      <div class="dash-card anim-enter-left" style="animation-delay:0.4s;">
+        <div class="card-title" style="margin-bottom:4px;"><span class="accent-dot"></span>高危随访人员名单</div>
+        <div class="overflow-x-auto -mx-1 px-1">
+          <div class="table-wrapper" id="followupTableWrapper" style="min-width:540px;">
+            <table class="followup-table">
+              <thead>
+                <tr>
+                  <th>姓名</th>
+                  <th>年龄</th>
+                  <th>所属社区</th>
+                  <th>筛查评分</th>
+                  <th>风险等级</th>
+                  <th>随访提示</th>
+                </tr>
+              </thead>
+              <tbody id="followupTableBody">
+                <!-- 由 JS 动态渲染 -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </section>
+</main>
+
+<!-- ============================================================ -->
+<!-- ==================== JavaScript 脚本区 ===================== -->
+<!-- ============================================================ -->
+<script>
+(function() {
+  'use strict';
+
+  // =============================================================
+  // 1. 数据统一从 Flask 接口读取；页面保留原稿视觉和图表结构。
+  // =============================================================
+  const API_BASE_URL = '';
+
+  // =============================================================
+  // 2. 五级风险配色与文案（项目固定标准，不允许修改）
+  // =============================================================
+  const RISK_LEVELS = [
+    { level: 1, label: 'Ⅰ级 低风险', color: '#00B578', bg: 'rgba(0,181,120,0.15)' },
+    { level: 2, label: 'Ⅱ级 中低风险', color: '#14C9C9', bg: 'rgba(20,201,201,0.15)' },
+    { level: 3, label: 'Ⅲ级 中等风险', color: '#FFB400', bg: 'rgba(255,180,0,0.15)' },
+    { level: 4, label: 'Ⅳ级 高风险', color: '#FF7D00', bg: 'rgba(255,125,0,0.15)' },
+    { level: 5, label: 'Ⅴ级 极高危', color: '#F53F3F', bg: 'rgba(245,63,63,0.15)' },
+  ];
+  const RISK_MAP_COLORS = ['#00B578', '#14C9C9', '#FFB400', '#FF7D00', '#F53F3F'];
+
+  // =============================================================
+  // 3. 工具函数
+  // =============================================================
+
+  /** 格式化数字（千分位） */
+  function formatNum(n) {
+    return Number(n).toLocaleString('zh-CN');
+  }
+
+  /** 根据风险等级获取标签 HTML */
+  function getRiskTagHTML(level) {
+    var info = RISK_LEVELS.find(function(r) { return r.level === level; });
+    if (!info) return '<span class="risk-tag">--</span>';
+    return '<span class="risk-tag level-' + level + '">' + info.label + '</span>';
+  }
+
+  /** 从风险值映射等级（1-5） */
+  function valueToRiskLevel(val) {
+    if (val >= 70) return 5;
+    if (val >= 55) return 4;
+    if (val >= 40) return 3;
+    if (val >= 25) return 2;
+    return 1;
+  }
+
+  /** 判断当前是否为移动端视口 */
+  function isMobileViewport() {
+    return window.innerWidth < 768;
+  }
+
+  /** 获取地图 visualMap 位置配置（移动端下移到底部） */
+  function getMapVisualMapOpt() {
+    var isMobile = isMobileViewport();
+    return {
+      min: 0,
+      max: 85,
+      left: isMobile ? 'center' : 'left',
+      bottom: isMobile ? 0 : 0,
+      top: isMobile ? 'auto' : undefined,
+      text: ['高', '低'],
+      textStyle: { color: '#94A3B8', fontSize: 10 },
+      inRange: {
+        color: ['#00B578', '#14C9C9', '#FFB400', '#FF7D00', '#F53F3F']
+      },
+      calculable: true,
+      itemWidth: isMobile ? 8 : 10,
+      itemHeight: isMobile ? 50 : 80,
+      orient: isMobile ? 'horizontal' : 'vertical'
+    };
+  }
+
+  // =============================================================
+  // 5. 将后端群体指标转换为原页面图表需要的结构。
+  // =============================================================
+  function fetchData(endpoint) {
+    var url = endpoint === 'followup'
+      ? '/api/analysis/follow-ups?limit=100'
+      : '/api/analysis/dashboard';
+    return fetch(API_BASE_URL + url).then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    }).then(function(json) {
+      if (!json.success) throw new Error(json.message || '请求失败');
+       var data = json.data || {};
+       if (endpoint === 'summary') {
+         var average = (Number(data.heart_risk_rate) + Number(data.stroke_risk_rate)) / 2;
+         return {
+           total_screening_count: Number(data.total_residents) || 0,
+           high_risk_count: Number(data.high_risk_follow_up_count) || 0,
+           avg_disease_probability: Number.isFinite(average) ? average : 0,
+           pending_followup_count: Number(data.high_risk_follow_up_count) || 0
+         };
+       }
+       if (endpoint === 'profile') {
+         var factorMap = {};
+         (Array.isArray(data.risk_factors) ? data.risk_factors : []).forEach(function(item) {
+           factorMap[item.name] = Number(item.rate) || 0;
+         });
+        return {
+          radar: {
+            avg_risk_score: averageRiskScore(data),
+            hypertension_rate: factorMap['高血压'] || 0,
+            obesity_rate: factorMap['超重或肥胖'] || 0,
+            smoking_rate: factorMap['当前吸烟'] || 0,
+            insufficient_exercise_rate: factorMap['缺乏规律运动'] || 0
+          },
+           word_cloud: (Array.isArray(data.risk_factors) ? data.risk_factors : []).map(function(item) {
+             return { factor_name: item.name, weight: item.rate };
+           })
+        };
+      }
+      if (endpoint === 'map') {
+        return [{
+          province: '四川省',
+          risk_value: averageRiskScore(data),
+          risk_level: valueToRiskLevel(averageRiskScore(data))
+        }];
+      }
+      if (endpoint === 'followup') {
+        return data;
+      }
+      return {
+         feature_importance: (Array.isArray(data.risk_factors) ? data.risk_factors : []).map(function(item) {
+           return { feature_name: item.name, importance: item.rate };
+         }),
+         age_pyramid: (Array.isArray(data.age_groups) ? data.age_groups : []).map(function(item) {
+          return {
+            age_group: item.age_group,
+            heart_count: item.heart,
+            stroke_count: item.stroke
+          };
+        })
+      };
+    });
+  }
+
+  function averageRiskScore(data) {
+    return Math.min(100, Number((data.heart_risk_rate * 0.6 + data.stroke_risk_rate * 0.4 +
+      data.comorbidity_rate * 0.8).toFixed(1)));
+  }
+
+  // =============================================================
+  // 6. 渲染函数：每个模块独立，方便后端对接
+  // =============================================================
+
+  /* ---------- 6a. 概览卡片 ---------- */
+  function renderOverview(data) {
+    document.getElementById('statTotalScreening').textContent = formatNum(data.total_screening_count);
+    document.getElementById('statHighRisk').textContent = formatNum(data.high_risk_count);
+    var pct = data.total_screening_count > 0
+      ? (data.high_risk_count / data.total_screening_count * 100).toFixed(1)
+      : '0.0';
+    document.getElementById('highRiskPct').textContent = pct + '%';
+    document.getElementById('statAvgProb').textContent = data.avg_disease_probability.toFixed(1) + '%';
+    document.getElementById('statPendingFollowup').textContent = formatNum(data.pending_followup_count);
+  }
+
+  /* ---------- 6b. 雷达图 ---------- */
+  function renderRadar(data) {
+    var dom = document.getElementById('radarChart');
+    if (!dom) return;
+    var chart = echarts.init(dom);
+    chart.setOption({
+      tooltip: {
+        trigger: 'item',
+        backgroundColor: 'rgba(15,23,42,0.9)',
+        borderColor: '#165DFF',
+        textStyle: { color: '#E2E8F0', fontSize: 12 }
+      },
+      radar: {
+        indicator: [
+          { name: '平均风险', max: 100 },
+          { name: '高血压占比', max: 100 },
+          { name: '肥胖率', max: 100 },
+          { name: '吸烟率', max: 100 },
+          { name: '运动不足率', max: 100 }
+        ],
+        center: ['50%', '50%'],
+        radius: '65%',
+        axisName: { color: '#94A3B8', fontSize: isMobileViewport() ? 10 : 11 },
+        splitArea: { areaStyle: { color: ['rgba(22,93,255,0.02)', 'rgba(22,93,255,0.05)'] } },
+        axisLine: { lineStyle: { color: 'rgba(22,93,255,0.15)' } },
+        splitLine: { lineStyle: { color: 'rgba(22,93,255,0.1)' } }
+      },
+      series: [{
+        type: 'radar',
+        data: [{
+          value: [
+            data.avg_risk_score,
+            data.hypertension_rate,
+            data.obesity_rate,
+            data.smoking_rate,
+            data.insufficient_exercise_rate
+          ],
+          name: '健康风险',
+          areaStyle: { color: 'rgba(22,93,255,0.25)' },
+          lineStyle: { color: '#165DFF', width: 2 },
+          itemStyle: { color: '#165DFF' }
+        }],
+        symbol: 'circle',
+        symbolSize: 6
+      }]
+    });
+    window.addEventListener('resize', function() { chart.resize(); });
+  }
+
+  /* ---------- 6c. 词云图 ---------- */
+  function renderWordCloud(data) {
+    var dom = document.getElementById('wordCloudChart');
+    if (!dom) return;
+    var chart = echarts.init(dom);
+    chart.setOption({
+      tooltip: {
+        trigger: 'item',
+        formatter: function(p) { return p.name + '：权重 ' + p.value; },
+        backgroundColor: 'rgba(15,23,42,0.9)',
+        borderColor: '#165DFF',
+        textStyle: { color: '#E2E8F0', fontSize: 12 }
+      },
+      series: [{
+        type: 'wordCloud',
+        gridSize: 12,
+        sizeRange: [14, 48],
+        rotationRange: [-30, 30],
+        shape: 'circle',
+        maskImage: undefined,
+        left: 'center',
+        top: 'center',
+        width: '90%',
+        height: '90%',
+        drawOutOfBound: false,
+        shrinkToFit: true,
+        textStyle: {
+          color: function() {
+            return RISK_MAP_COLORS[Math.floor(Math.random() * RISK_MAP_COLORS.length)];
+          },
+          fontFamily: 'PingFang SC, Microsoft YaHei, sans-serif'
+        },
+        data: data.map(function(item) {
+          return { name: item.factor_name, value: item.weight };
+        })
+      }]
+    });
+    window.addEventListener('resize', function() { chart.resize(); });
+  }
+
+  /* ---------- 6d. 地图 ---------- */
+  function renderMap(data) {
+    var dom = document.getElementById('mapChart');
+    if (!dom) return;
+    var chart = echarts.init(dom);
+
+    var mapData = data.map(function(d) {
+      return {
+        name: d.province,
+        value: d.risk_value,
+        riskLevel: d.risk_level
+      };
+    });
+
+    var isMobile = isMobileViewport();
+
+    chart.setOption({
+      tooltip: {
+        trigger: 'item',
+        formatter: function(p) {
+          if (!p.value) return p.name + '<br/>暂无数据';
+          var level = valueToRiskLevel(p.value);
+          var info = RISK_LEVELS[level - 1];
+          return p.name + '<br/>风险值：' + p.value + '<br/>风险等级：' + info.label;
+        },
+        backgroundColor: 'rgba(15,23,42,0.9)',
+        borderColor: '#165DFF',
+        textStyle: { color: '#E2E8F0', fontSize: 12 }
+      },
+      visualMap: getMapVisualMapOpt(),
+      series: [{
+        type: 'map',
+        map: 'china',
+        roam: isMobile ? false : false,
+        label: {
+          show: !isMobile,
+          color: '#E2E8F0',
+          fontSize: 9
+        },
+        itemStyle: {
+          borderColor: '#0F172A',
+          borderWidth: 1.5,
+          areaColor: '#1E293B'
+        },
+        emphasis: {
+          label: { color: '#fff', fontSize: 12 },
+          itemStyle: { areaColor: '#3C7EFF' }
+        },
+        data: mapData
+      }]
+    });
+    window.addEventListener('resize', function() { chart.resize(); });
+  }
+
+  /* ---------- 6e. 特征重要性柱状图 ---------- */
+  function renderFeatureImportance(data) {
+    var dom = document.getElementById('featureChart');
+    if (!dom) return;
+    var chart = echarts.init(dom);
+    var names = data.map(function(d) { return d.feature_name; }).reverse();
+    var values = data.map(function(d) { return d.importance; }).reverse();
+    var colors = values.map(function(v) {
+      if (v >= 15) return '#F53F3F';
+      if (v >= 10) return '#FF7D00';
+      if (v >= 5) return '#FFB400';
+      return '#165DFF';
+    });
+
+    chart.setOption({
+      tooltip: {
+        trigger: 'axis',
+        axisPointer: { type: 'shadow' },
+        formatter: function(p) {
+          return p[0].name + '<br/>贡献占比：' + p[0].value + '%';
+        },
+        backgroundColor: 'rgba(15,23,42,0.9)',
+        borderColor: '#165DFF',
+        textStyle: { color: '#E2E8F0', fontSize: 12 }
+      },
+      grid: { top: 10, bottom: 10, left: 10, right: 30, containLabel: true },
+      xAxis: {
+        type: 'value',
+        max: 25,
+        axisLabel: { color: '#64748B', fontSize: 10 },
+        splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
+        axisLine: { show: false }
+      },
+      yAxis: {
+        type: 'category',
+        data: names,
+        axisLabel: { color: '#94A3B8', fontSize: isMobileViewport() ? 10 : 11 },
+        axisLine: { show: false },
+        axisTick: { show: false }
+      },
+      series: [{
+        type: 'bar',
+        data: values.map(function(v, i) {
+          return {
+            value: v,
+            itemStyle: {
+              color: {
+                type: 'linear',
+                x: 0, y: 0, x2: 1, y2: 0,
+                colorStops: [
+                  { offset: 0, color: 'rgba(22,93,255,0.6)' },
+                  { offset: 1, color: colors[i] }
+                ]
+              },
+              borderRadius: [0, 4, 4, 0]
+            }
+          };
+        }),
+        barWidth: isMobileViewport() ? 12 : 16,
+        label: {
+          show: true,
+          position: 'right',
+          color: '#94A3B8',
+          fontSize: 10,
+          formatter: function(p) { return p.value + '%'; }
+        }
+      }]
+    });
+    window.addEventListener('resize', function() { chart.resize(); });
+  }
+
+  /* ---------- 6f. 年龄金字塔 ---------- */
+  function renderAgePyramid(data) {
+    var dom = document.getElementById('agePyramidChart');
+    if (!dom) return;
+    var chart = echarts.init(dom);
+
+    var groups = data.map(function(d) { return d.age_group; });
+    var heartVals = data.map(function(d) { return d.heart_count; });
+    var strokeVals = data.map(function(d) { return -d.stroke_count; });
+    var isMobile = isMobileViewport();
+
+    chart.setOption({
+      tooltip: {
+        trigger: 'axis',
+        axisPointer: { type: 'shadow' },
+        formatter: function(p) {
+          var heart = p[0].value;
+          var stroke = Math.abs(p[1].value);
+          return p[0].axisValue + '<br/>心脏事件：' + heart + ' 人<br/>脑卒中：' + stroke + ' 人';
+        },
+        backgroundColor: 'rgba(15,23,42,0.9)',
+        borderColor: '#165DFF',
+        textStyle: { color: '#E2E8F0', fontSize: 12 }
+      },
+      grid: { top: 10, bottom: 10, left: 10, right: 10, containLabel: true },
+      xAxis: [{
+        type: 'value',
+        axisLabel: {
+          color: '#64748B',
+          fontSize: 10,
+          formatter: function(v) { return Math.abs(v); }
+        },
+        splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
+        axisLine: { show: false },
+        min: -6000,
+        max: 6000
+      }],
+      yAxis: {
+        type: 'category',
+        data: groups,
+        axisLabel: { color: '#94A3B8', fontSize: isMobile ? 10 : 11 },
+        axisLine: { show: false },
+        axisTick: { show: false }
+      },
+      series: [
+        {
+          name: '心脏事件',
+          type: 'bar',
+          data: heartVals,
+          barWidth: isMobile ? 12 : 14,
+          label: {
+            show: true,
+            position: 'right',
+            color: '#60A5FA',
+            fontSize: 9,
+            formatter: function(p) { return p.value; }
+          },
+          itemStyle: {
+            color: {
+              type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+              colorStops: [
+                { offset: 0, color: '#165DFF' },
+                { offset: 1, color: 'rgba(22,93,255,0.4)' }
+              ]
+            },
+            borderRadius: [4, 0, 0, 4]
+          }
+        },
+        {
+          name: '脑卒中',
+          type: 'bar',
+          data: strokeVals,
+          barWidth: isMobile ? 12 : 14,
+          label: {
+            show: true,
+            position: 'left',
+            color: '#F472B6',
+            fontSize: 9,
+            formatter: function(p) { return Math.abs(p.value); }
+          },
+          itemStyle: {
+            color: {
+              type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+              colorStops: [
+                { offset: 0, color: '#F472B6' },
+                { offset: 1, color: 'rgba(244,114,182,0.3)' }
+              ]
+            },
+            borderRadius: [0, 4, 4, 0]
+          }
+        }
+      ]
+    });
+    window.addEventListener('resize', function() { chart.resize(); });
+  }
+
+  /* ---------- 6g. 随访表格 ---------- */
+  function renderFollowUpTable(data) {
+    var tbody = document.getElementById('followupTableBody');
+    if (!tbody) return;
+    var rows = Array.isArray(data) ? data : [];
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#94A3B8;padding:24px;">暂无待随访居民</td></tr>';
+      return;
+    }
+    var html = '';
+    rows.forEach(function(row) {
+      var cls = row.risk_level === 5 ? 'row-extreme' : '';
+      html += '<tr class="' + cls + '">' +
+        '<td>' + row.name + '</td>' +
+        '<td>' + row.age + '</td>' +
+        '<td>' + row.community + '</td>' +
+         '<td>' + Number(row.screening_score || 0).toFixed(0) + '/5</td>' +
+        '<td>' + getRiskTagHTML(row.risk_level) + '</td>' +
+        '<td style="color:' + (row.risk_level >= 4 ? '#F53F3F' : '#FFB400') + ';font-size:11px;">' + row.followup_note + '</td>' +
+        '</tr>';
+    });
+    tbody.innerHTML = html;
+  }
+
+  /* ---------- 6h. 时钟与时间戳 ---------- */
+  function updateClock() {
+    var now = new Date();
+    var timeStr = now.toLocaleTimeString('zh-CN', { hour12: false });
+    document.getElementById('clockDisplay').textContent = timeStr;
+  }
+  function updateTimestamp() {
+    var now = new Date();
+    var ts = now.getFullYear() + '-' +
+      String(now.getMonth()+1).padStart(2,'0') + '-' +
+      String(now.getDate()).padStart(2,'0') + ' ' +
+      String(now.getHours()).padStart(2,'0') + ':' +
+      String(now.getMinutes()).padStart(2,'0');
+    document.getElementById('dataTimestamp').textContent = ts;
+  }
+
+  // =============================================================
+  // 7. 加载中国地图 GeoJSON 并初始化所有图表
+  // =============================================================
+  function initAll() {
+    updateClock();
+    updateTimestamp();
+    setInterval(updateClock, 1000);
+    setInterval(updateTimestamp, 30000);
+
+    /* 概览、画像、群体特征和地图共用群体分析接口。 */
+    Promise.all([
+      fetchData('summary'),
+      fetchData('profile'),
+      fetchData('map'),
+      fetchData('preprocess'),
+      fetchData('followup')
+    ]).then(function(results) {
+      var overview = results[0];
+      var community = results[1];
+      var mapData = results[2];
+      var preprocess = results[3];
+      var followUps = results[4];
+
+      renderOverview(overview);
+      renderRadar(community.radar);
+      renderWordCloud(community.word_cloud);
+      renderFeatureImportance(preprocess.feature_importance);
+      renderAgePyramid(preprocess.age_pyramid);
+       renderFollowUpTable((Array.isArray(followUps) ? followUps : []).map(function(row, index) {
+        var screeningScore = Math.min(5, Math.max(0, Number(row.risk_score || 0)));
+        var level = valueToRiskLevel(screeningScore / 5 * 100);
+        return {
+          name: '居民' + String(index + 1).padStart(3, '0'),
+          age: row.age,
+          community: row.district,
+          screening_score: screeningScore,
+          risk_level: level,
+          followup_note: level >= 4 ? '7日内重点随访' : '30日内常规随访'
+        };
+      }));
+      loadMapAndRender(mapData);
+    })['catch'](function(err) {
+      console.error('数据加载失败：', err);
+      showErrorModal('数据加载失败：' + err.message + '，请检查后端服务是否已启动。');
+    });
+  }
+
+  /** 加载中国地图 GeoJSON 并渲染地图（带移动端重试与 resize 重建） */
+  function loadMapAndRender(mapData) {
+    var mapUrl = 'https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json';
+
+    try {
+      var existing = echarts.getMap('china');
+      if (existing) {
+        renderMap(mapData);
+        return;
+      }
+    } catch(e) { /* 忽略 */ }
+
+    fetch(mapUrl)
+      .then(function(res) {
+        if (!res.ok) throw new Error('地图数据加载失败: ' + res.status);
+        return res.json();
+      })
+      .then(function(geoJson) {
+        echarts.registerMap('china', geoJson);
+        renderMap(mapData);
+      })
+      .catch(function(err) {
+        console.warn('地图数据加载失败，使用备用方案：', err);
+        var dom = document.getElementById('mapChart');
+        if (dom) {
+          dom.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#64748B;font-size:14px;text-align:center;padding:16px;">地图数据暂不可用，请检查网络连接</div>';
+        }
+      });
+  }
+
+  // =============================================================
+  // 8. 窗口 resize 自适应（移动端横竖屏切换时图表自动重排）
+  // =============================================================
+  var resizeTimer = null;
+  window.addEventListener('resize', function() {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(function() {
+      // 通知所有 ECharts 实例 resize，由各图表的独立 resize 监听处理
+      // 对于地图，如果 visualMap 方向需要变化，重新渲染
+      var mapDom = document.getElementById('mapChart');
+      if (mapDom && mapDom._chart_) {
+        var chart = mapDom._chart_;
+        chart.setOption({ visualMap: getMapVisualMapOpt() });
+        chart.resize();
+      }
+    }, 300);
+  });
+
+  // 扩展 ECharts init，记住实例引用供 resize 使用
+  var origInit = echarts.init;
+  echarts.init = function(dom) {
+    var chart = origInit.apply(this, arguments);
+    dom._chart_ = chart;
+    return chart;
+  };
+
+  // =============================================================
+
+  function showErrorModal(message) {
+    document.getElementById('errorModalDesc').textContent = message;
+    document.getElementById('errorModalOverlay').classList.remove('hidden');
+  }
+  function closeErrorModal() {
+    document.getElementById('errorModalOverlay').classList.add('hidden');
+  }
+  // 9. 启动
+  // =============================================================
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initAll);
+  } else {
+    initAll();
+  }
+
+})();
+</script>
+
+<!-- ===== 错误弹窗 ===== -->
+<div class="modal-overlay hidden" id="errorModalOverlay">
+  <div class="modal-box">
+    <div class="modal-icon">!</div>
+    <div class="modal-title">请求失败</div>
+    <div class="modal-desc" id="errorModalDesc">网络异常，请检查后端服务是否启动后重试。</div>
+    <button class="modal-btn" onclick="closeErrorModal()">我知道了</button>
+  </div>
+</div>
+</body>
+</html>
