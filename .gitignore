@@ -1,0 +1,24 @@
+# Local project material
+.env
+data/raw/
+data/features/
+# Python
+# Ignore caches at every directory level, including caches created by tests.
+__pycache__/
+**/__pycache__/
+*.py[cod]
+**/*.py[cod]
+.pytest_cache/
+**/.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE and OS files
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+
+# Runtime output
+logs/
