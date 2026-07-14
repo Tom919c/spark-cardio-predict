@@ -2,6 +2,9 @@
 .env
 data/raw/
 data/features/
+data/localstorage/
+data/models/*.joblib
+data/models/active_models.json
 # Python
 # Ignore caches at every directory level, including caches created by tests.
 __pycache__/

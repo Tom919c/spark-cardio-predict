@@ -1,0 +1,1 @@
+{"version": 2, "updated_at": "xgboost-phase2-v2-candidate", "feature_columns": ["age", "gender", "bmi", "cholesterol", "diabetes", "hypertension", "smoker", "alcohol", "exercise"], "models": {"heart": "xgboost_heart_xgboost_phase2_v2_20260714_120246.joblib", "stroke": "xgboost_stroke_xgboost_phase2_v2_20260714_120254.joblib"}}

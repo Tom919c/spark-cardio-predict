@@ -1,4 +1,4 @@
-"""双独立随机森林训练：不平衡处理、概率校准和训练耗时估算。"""
+"""双独立 XGBoost 训练：概率校准、阈值优化和训练耗时估算。"""
 
 from __future__ import annotations
 
@@ -7,19 +7,18 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import joblib
-import numpy as np
 import pandas as pd
-from sklearn.ensemble import RandomForestClassifier
 from sklearn.isotonic import IsotonicRegression
 from sklearn.metrics import precision_recall_curve
 from sklearn.model_selection import train_test_split
+from xgboost import XGBClassifier
 
 from src.ml.calibrated_model import CalibratedRiskModel
 from src.ml.evaluate import ModelEvaluator
 
 
 class CardioModelTrainer:
-    """训练心脏事件与脑卒中两个独立随机森林模型。"""
+    """训练心脏事件与脑卒中两个独立 XGBoost 模型。"""
 
     def __init__(self, config, progress_callback=None):
         self.config = config
@@ -27,10 +26,8 @@ class CardioModelTrainer:
         self.model_output_dir = Path(config["MODEL_OUTPUT_DIR"])
         self.random_state = config["RANDOM_STATE"]
         self.test_size = config["TRAIN_TEST_SPLIT_RATIO"]
-        self.n_estimators = config["RANDOM_FOREST_TREES"]
+        self.n_estimators = config.get("XGBOOST_TREES", 360)
         self.targets = config["RISK_TARGETS"]
-        self.oversample_ratio = config.get("MINORITY_OVERSAMPLE_RATIO", 0.15)
-        self.max_multiplier = config.get("MINORITY_MAX_MULTIPLIER", 3.0)
         self.stroke_min_recall = config.get("STROKE_MIN_RECALL", 0.70)
         self.progress_callback = progress_callback or print
         self._started_at = time.perf_counter()
@@ -39,8 +36,8 @@ class CardioModelTrainer:
         elapsed = time.perf_counter() - self._started_at
         self.progress_callback(f"[训练进度 {elapsed:.1f}s] {message}")
 
-    def estimate(self, dataframe, benchmark_trees=20):
-        """用小规模森林估算本次双模型训练耗时，不写入模型文件。"""
+    def estimate(self, dataframe, benchmark_trees=80):
+        """用小规模 XGBoost 估算本次双模型训练耗时，不写入模型文件。"""
         started = time.perf_counter()
         sample = dataframe.sample(min(len(dataframe), 30_000), random_state=self.random_state)
         estimates = {}
@@ -51,11 +48,7 @@ class CardioModelTrainer:
                 features, target, test_size=self.test_size,
                 random_state=self.random_state, stratify=target,
             )
-            benchmark = RandomForestClassifier(
-                n_estimators=benchmark_trees, max_depth=10,
-                min_samples_leaf=5, class_weight="balanced_subsample",
-                random_state=self.random_state, n_jobs=-1,
-            )
+            benchmark = self._build_estimator(n_estimators=benchmark_trees)
             fit_started = time.perf_counter()
             benchmark.fit(x_train, y_train)
             benchmark_seconds = time.perf_counter() - fit_started
@@ -86,7 +79,7 @@ class CardioModelTrainer:
         elapsed = round(time.perf_counter() - total_started, 1)
         self._progress(f"全部模型完成，实际训练耗时 {elapsed:.1f}s。")
         return {
-            "strategy": "balanced_subsample_with_train_only_minority_oversampling_and_isotonic_calibration",
+            "strategy": "xgboost_with_natural_prevalence_training_isotonic_calibration_and_threshold_tuning",
             "trained_at": datetime.now(timezone.utc).isoformat(),
             "features": self.feature_columns,
             "training_estimate": estimate,
@@ -108,21 +101,10 @@ class CardioModelTrainer:
             random_state=self.random_state, stratify=y_train,
         )
 
-        # 只增强拟合子集，校准集和测试集保持真实患病率，避免评估虚高。
-        if target_name == "stroke":
-            x_fit, y_fit, weight_fit, added = self._oversample_minority(
-                x_fit, y_fit, weight_fit
-            )
-        else:
-            added = 0
-
         self._progress(
-            f"开始 {target_name} 模型（{index}/{total}），拟合样本 {len(x_fit):,}，新增卒中样本 {added:,}。"
+            f"开始 {target_name} 模型（{index}/{total}），拟合样本 {len(x_fit):,}。"
         )
-        estimator = RandomForestClassifier(
-            n_estimators=self.n_estimators, max_depth=10, min_samples_leaf=5,
-            class_weight="balanced_subsample", random_state=self.random_state, n_jobs=-1,
-        )
+        estimator = self._build_estimator()
         estimator.fit(x_fit, y_fit, sample_weight=weight_fit)
         calibrator = IsotonicRegression(out_of_bounds="clip")
         calibrator.fit(
@@ -138,7 +120,7 @@ class CardioModelTrainer:
         metrics["decision_threshold"] = round(float(threshold), 6)
         metrics["train_positive_rate"] = round(float(y_fit.mean()), 6)
         metrics["test_positive_rate"] = round(float(y_test.mean()), 6)
-        metrics["oversampled_rows"] = int(added)
+        metrics["oversampled_rows"] = 0
         model_path = self._save_model(model, target_name, run_label)
         elapsed = round(time.perf_counter() - target_started, 1)
         self._progress(f"{target_name} 模型完成，耗时 {elapsed:.1f}s，阈值 {threshold:.4f}。")
@@ -151,46 +133,41 @@ class CardioModelTrainer:
             "feature_importance": dict(zip(self.feature_columns, map(float, model.feature_importances_))),
         }
 
-    def _oversample_minority(self, features, target, weights):
-        positive_index = np.flatnonzero(target.to_numpy() == 1)
-        negative_count = int((target == 0).sum())
-        desired = min(
-            int(negative_count * self.oversample_ratio),
-            int(len(positive_index) * self.max_multiplier),
-        )
-        additional = max(desired - len(positive_index), 0)
-        if additional == 0:
-            return features, target, weights, 0
-        rng = np.random.default_rng(self.random_state)
-        chosen = rng.choice(positive_index, size=additional, replace=True)
-        extra_features = features.iloc[chosen]
-        extra_target = target.iloc[chosen]
-        extra_weights = weights.iloc[chosen] if weights is not None else None
-        output_features = pd.concat([features, extra_features], ignore_index=True)
-        output_target = pd.concat([target.reset_index(drop=True), extra_target.reset_index(drop=True)], ignore_index=True)
-        if weights is None:
-            output_weights = None
-        else:
-            output_weights = pd.concat([weights.reset_index(drop=True), extra_weights.reset_index(drop=True)], ignore_index=True)
-        return output_features, output_target, output_weights, additional
-
     def _select_threshold(self, y_true, probabilities, target_name):
-        if target_name != "stroke":
-            return 0.5
+        required_recall = 0.55 if target_name == "heart" else self.stroke_min_recall
         precision, recall, thresholds = precision_recall_curve(y_true, probabilities)
         candidates = [
             (float(threshold), float(p), float(r))
             for p, r, threshold in zip(precision[:-1], recall[:-1], thresholds)
-            if r >= self.stroke_min_recall
+            if r >= required_recall
         ]
         if candidates:
             return max(candidates, key=lambda item: item[1])[0]
         return 0.5
 
+    def _build_estimator(self, n_estimators=None):
+        """Return the selected production estimator with deterministic settings."""
+        return XGBClassifier(
+            n_estimators=n_estimators or self.n_estimators,
+            max_depth=self.config.get("XGBOOST_MAX_DEPTH", 5),
+            learning_rate=self.config.get("XGBOOST_LEARNING_RATE", 0.05),
+            subsample=self.config.get("XGBOOST_SUBSAMPLE", 0.85),
+            colsample_bytree=self.config.get("XGBOOST_COLSAMPLE_BYTREE", 0.90),
+            min_child_weight=self.config.get("XGBOOST_MIN_CHILD_WEIGHT", 6.0),
+            gamma=self.config.get("XGBOOST_GAMMA", 0.0),
+            reg_alpha=self.config.get("XGBOOST_REG_ALPHA", 0.0),
+            reg_lambda=self.config.get("XGBOOST_REG_LAMBDA", 2.0),
+            objective="binary:logistic",
+            eval_metric="logloss",
+            tree_method="hist",
+            n_jobs=-1,
+            random_state=self.random_state,
+        )
+
     def _save_model(self, model, target_name, run_label):
         self.model_output_dir.mkdir(parents=True, exist_ok=True)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         safe_label = "".join(c for c in run_label if c.isalnum() or c in "_-") or "run"
-        path = self.model_output_dir / f"random_forest_{target_name}_{safe_label}_{timestamp}.joblib"
+        path = self.model_output_dir / f"xgboost_{target_name}_{safe_label}_{timestamp}.joblib"
         joblib.dump(model, path)
         return path

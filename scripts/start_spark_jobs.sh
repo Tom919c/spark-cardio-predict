@@ -12,10 +12,23 @@ if [[ -f "$PROJECT_DIR/.env" ]]; then
 fi
 
 SPARK_SUBMIT_BIN="${SPARK_SUBMIT_BIN:-spark-submit}"
-HDFS_RAW_PATH="${HDFS_RAW_PATH:-/user/${USER}/cardio/raw}"
-HDFS_STAGING_PATH="${HDFS_STAGING_PATH:-/user/${USER}/cardio/staging}"
-HDFS_FEATURE_PATH="${HDFS_FEATURE_PATH:-/user/${USER}/cardio/feature}"
+HDFS_NAMENODE_URI="${HDFS_NAMENODE_URI:-hdfs://localhost:9000}"
+HDFS_RAW_PATH="${HDFS_RAW_PATH:-/user/${USER}/cardiospark/raw}"
+HDFS_STAGING_PATH="${HDFS_STAGING_PATH:-/user/${USER}/cardiospark/staging}"
+HDFS_FEATURE_PATH="${HDFS_FEATURE_PATH:-/user/${USER}/cardiospark/feature}"
 INPUT_FILE="${1:-${HDFS_INPUT_PATH:-$HDFS_RAW_PATH/chengdu_resident_health_simulated.csv}}"
+
+qualify_hdfs_path() {
+  case "$1" in
+    *://*) printf '%s\n' "$1" ;;
+    /*) printf '%s%s\n' "${HDFS_NAMENODE_URI%/}" "$1" ;;
+    *) printf '%s\n' "$1" ;;
+  esac
+}
+
+INPUT_FILE="$(qualify_hdfs_path "$INPUT_FILE")"
+HDFS_STAGING_PATH="$(qualify_hdfs_path "$HDFS_STAGING_PATH")"
+HDFS_FEATURE_PATH="$(qualify_hdfs_path "$HDFS_FEATURE_PATH")"
 
 cd "$PROJECT_DIR"
 "$SPARK_SUBMIT_BIN" src/spark_jobs/etl_job.py "$INPUT_FILE" "$HDFS_STAGING_PATH"

@@ -1,9 +1,15 @@
-import joblib
 import pandas as pd
+from pathlib import Path
+from threading import Lock
+
+from src.ml.predict import CardioRiskPredictor
 
 
 class ModelExplainer:
     """Builds single-sample SHAP explanations for trained classifiers."""
+
+    _explainer_cache = {}
+    _cache_lock = Lock()
 
     FEATURE_LABELS = {
         "age": "年龄",
@@ -28,6 +34,35 @@ class ModelExplainer:
     }
 
     def explain_prediction(self, model_path, sample, top_n=3):
+        model = CardioRiskPredictor.load_model(model_path)
+        sample_frame = self._build_sample_frame(
+            sample, getattr(model, "feature_columns", None)
+        )
+        explainable_model = getattr(model, "estimator", model)
+
+        # XGBoost exposes exact tree-path contributions itself.  This stays
+        # compatible when the separately installed SHAP package lags behind
+        # the selected XGBoost version.
+        if self._is_xgboost_model(explainable_model):
+            try:
+                contributions = self._xgboost_contributions(
+                    explainable_model, sample_frame
+                )
+                ranked = self._rank_contributions(
+                    sample_frame.iloc[0].to_dict(), contributions, top_n=top_n
+                )
+                return {
+                    "available": True,
+                    "method": "xgboost_pred_contribs",
+                    "message": "XGBoost feature contributions generated successfully.",
+                    "top_positive_factors": ranked["top_positive_factors"],
+                    "top_negative_factors": ranked["top_negative_factors"],
+                }
+            except Exception:
+                # Continue to the generic SHAP path so another compatible
+                # explainer can still be used if native contributions fail.
+                pass
+
         try:
             import shap
         except ImportError:
@@ -39,13 +74,9 @@ class ModelExplainer:
                 "top_negative_factors": [],
             }
 
-        model = joblib.load(model_path)
-        sample_frame = self._build_sample_frame(sample)
-
         try:
-            explainable_model = getattr(model, "estimator", model)
             if self._is_tree_model(explainable_model):
-                explainer = shap.TreeExplainer(explainable_model)
+                explainer = self._get_tree_explainer(shap, model_path, explainable_model)
                 shap_values = explainer.shap_values(sample_frame)
             else:
                 explainer = shap.Explainer(model, sample_frame)
@@ -70,15 +101,42 @@ class ModelExplainer:
             "top_negative_factors": ranked["top_negative_factors"],
         }
 
-    def _build_sample_frame(self, sample):
+    def _get_tree_explainer(self, shap, model_path, model):
+        path = Path(model_path).resolve()
+        stat = path.stat()
+        key = str(path)
+        version = (stat.st_mtime_ns, stat.st_size)
+        with self._cache_lock:
+            cached = self._explainer_cache.get(key)
+            if cached and cached[0] == version:
+                return cached[1]
+            explainer = shap.TreeExplainer(model)
+            self._explainer_cache[key] = (version, explainer)
+            return explainer
+
+    def _build_sample_frame(self, sample, feature_columns=None):
         working_sample = dict(sample)
         if "bmi" in working_sample:
             working_sample["bmi"] = round(float(working_sample["bmi"]), 2)
-        return pd.DataFrame([working_sample])
+        return pd.DataFrame([working_sample], columns=feature_columns or list(working_sample))
 
     def _is_tree_model(self, model):
         model_name = model.__class__.__name__.lower()
         return "forest" in model_name or "tree" in model_name or "boost" in model_name
+
+    @staticmethod
+    def _is_xgboost_model(model):
+        return "xgb" in model.__class__.__name__.lower()
+
+    @staticmethod
+    def _xgboost_contributions(model, sample_frame):
+        import xgboost as xgb
+
+        contributions = model.get_booster().predict(
+            xgb.DMatrix(sample_frame), pred_contribs=True, validate_features=False
+        )
+        # The final column is the bias term, which is not an input factor.
+        return contributions[0, : len(sample_frame.columns)]
 
     def _extract_contributions(self, sample_frame, shap_values):
         if hasattr(shap_values, "values"):

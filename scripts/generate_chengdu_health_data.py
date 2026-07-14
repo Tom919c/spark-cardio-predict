@@ -44,6 +44,14 @@ DISTRICT_PROBABILITIES = np.array(
 )
 DISTRICT_PROBABILITIES /= DISTRICT_PROBABILITIES.sum()
 
+# 仅用于制造合理的区域差异，不代表真实行政区统计结论。
+# 先按区域抽样，再把区域健康环境效应带入个体风险分布，避免所有区的风险率完全相同。
+DISTRICT_RISK_MULTIPLIERS = np.array(
+    [1.04, 0.96, 1.02, 1.08, 1.06, 1.00, 1.12, 1.03, 0.92, 0.95,
+     0.93, 1.05, 1.02, 1.07, 1.10, 1.04, 1.11, 1.14, 1.03, 0.98],
+    dtype=np.float32,
+)
+
 # The values are taken from mydocs/成都市居民健康状况.md.
 BASE_RATES = {
     "hypertension": 0.3355,
@@ -57,6 +65,13 @@ BASE_RATES = {
     "secondhand_smoke": 0.6098,
     "annual_stroke_event": 500.28 / 100_000,
     "annual_heart_attack_event": 79.36 / 100_000,
+}
+
+# 这两个标签表示“年度事件代理”，不是模型筛查高危率。
+# 来源文档只给出了年度脑卒中和急性心梗新发率，因此不再使用未经来源支持的 11.5% 心脏标签率。
+EVENT_LABEL_RATES = {
+    "heart": BASE_RATES["annual_heart_attack_event"],
+    "stroke": BASE_RATES["annual_stroke_event"],
 }
 
 
@@ -79,9 +94,32 @@ def generate_chunk(rng: np.random.Generator, start: int, size: int) -> pd.DataFr
     age = np.clip(np.rint(rng.normal(57.0, 16.0, size)), 18, 90).astype(np.int16)
     gender = rng.binomial(1, 0.49, size).astype(np.int8)
 
-    # Generate BMI categories directly so the city-level overweight and obesity
-    # rates remain close to the documented baseline.
-    bmi_category = rng.choice(3, size=size, p=[0.6398, 0.2063, 0.1539])
+    district = rng.choice(DISTRICTS, size=size, p=DISTRICT_PROBABILITIES)
+    district_code = pd.Categorical(district, categories=DISTRICTS).codes.astype(np.int16) + 1
+    district_risk = DISTRICT_RISK_MULTIPLIERS[district_code - 1]
+
+    # 约 5% 的居民属于 35~64 岁多因素聚集人群，用于模拟现实中的
+    # 中年高危个体，而不是让高危名单只剩下高龄居民。
+    middle_age = (age >= 35) & (age <= 64)
+    risk_cluster = (
+        middle_age & (rng.random(size) < 0.09)
+    ).astype(np.int8)
+
+    # BMI 类别由年龄、区域和风险聚集倾向共同决定，再用分位点控制全市基线比例。
+    bmi_score = (
+        rng.normal(0, 1, size)
+        + 0.10 * (age - 45) / 18.0
+        + 0.55 * (district_risk - 1.0)
+        + 1.45 * risk_cluster
+        + 0.08 * (gender == 1)
+    )
+    normal_cutoff = np.quantile(bmi_score, 0.6398)
+    overweight_cutoff = np.quantile(bmi_score, 0.6398 + 0.2063)
+    bmi_category = np.select(
+        [bmi_score >= overweight_cutoff, bmi_score >= normal_cutoff],
+        [2, 1],
+        default=0,
+    )
     bmi = np.empty(size, dtype=np.float32)
     normal = bmi_category == 0
     overweight = bmi_category == 1
@@ -100,11 +138,19 @@ def generate_chunk(rng: np.random.Generator, start: int, size: int) -> pd.DataFr
     weight_kg = np.round(bmi * (height_cm / 100.0) ** 2, 1)
 
     age_factor = (age - 45) / 18.0
-    exercise_score = 0.9 - 0.35 * (bmi >= 25) - 0.16 * np.maximum(age - 60, 0) / 30
+    exercise_score = (
+        0.9 - 0.35 * (bmi >= 25)
+        - 0.16 * np.maximum(age - 60, 0) / 30
+        - 0.20 * (district_risk - 1.0)
+        - 0.24 * risk_cluster
+    )
     exercise_score += rng.normal(0, 0.55, size)
     exercise = sample_binary_by_score(exercise_score, BASE_RATES["exercise"])
 
-    smoker_score = 0.35 + 0.35 * (gender == 1) + 0.10 * (age < 60)
+    smoker_score = (
+        0.35 + 0.35 * (gender == 1) + 0.10 * (age < 60)
+        + 0.18 * (district_risk - 1.0) + 0.28 * risk_cluster
+    )
     smoker_score += rng.normal(0, 0.45, size)
     current_smoker = sample_binary_by_score(
         smoker_score, BASE_RATES["current_smoker"]
@@ -114,7 +160,10 @@ def generate_chunk(rng: np.random.Generator, start: int, size: int) -> pd.DataFr
     former_smoker = (current_smoker == 0) & (former_score >= np.quantile(former_score, 0.78))
     smoker = np.where(current_smoker == 1, 2, np.where(former_smoker, 1, 0)).astype(np.int8)
 
-    alcohol_score = 0.35 + 0.35 * (gender == 1) + 0.10 * (smoker > 0)
+    alcohol_score = (
+        0.35 + 0.35 * (gender == 1) + 0.10 * (smoker > 0)
+        + 0.15 * (district_risk - 1.0) + 0.16 * risk_cluster
+    )
     alcohol_score += rng.normal(0, 0.50, size)
     alcohol = sample_binary_by_score(alcohol_score, BASE_RATES["alcohol"])
 
@@ -126,8 +175,11 @@ def generate_chunk(rng: np.random.Generator, start: int, size: int) -> pd.DataFr
     salt_intake_g_day = np.round(salt_intake_g_day, 2)
 
     # Chronic-condition scores share age, BMI, diet, and exercise signals.
-    diabetes_score = 0.72 * age_factor + 0.55 * (bmi >= 25) + 0.25 * (bmi >= 30)
-    diabetes_score += 0.16 * (exercise == 0) + rng.normal(0, 0.80, size)
+    diabetes_score = (
+        0.72 * age_factor + 0.55 * (bmi >= 25) + 0.25 * (bmi >= 30)
+        + 0.16 * (exercise == 0) + 0.72 * risk_cluster
+        + 0.35 * (district_risk - 1.0) + rng.normal(0, 0.80, size)
+    )
     diabetes = sample_binary_by_score(diabetes_score, BASE_RATES["diabetes"])
 
     hypertension_score = (
@@ -137,6 +189,8 @@ def generate_chunk(rng: np.random.Generator, start: int, size: int) -> pd.DataFr
         + 0.24 * (salt_intake_g_day > 8)
         + 0.20 * diabetes
         - 0.35 * exercise
+        + 0.78 * risk_cluster
+        + 0.42 * (district_risk - 1.0)
         + rng.normal(0, 0.75, size)
     )
     hypertension_score += 0.18 * diabetes
@@ -147,6 +201,8 @@ def generate_chunk(rng: np.random.Generator, start: int, size: int) -> pd.DataFr
         + 0.30 * (bmi >= 25)
         + 0.18 * (exercise == 0)
         + 0.14 * diabetes
+        + 0.52 * risk_cluster
+        + 0.30 * (district_risk - 1.0)
         + rng.normal(0, 0.75, size)
     )
     abnormal_cholesterol = sample_binary_by_score(
@@ -183,6 +239,8 @@ def generate_chunk(rng: np.random.Generator, start: int, size: int) -> pd.DataFr
         + 0.22 * alcohol
         + 0.24 * (bmi >= 30)
         + 0.18 * (salt_intake_g_day > 8)
+        + 1.10 * risk_cluster
+        + 1.30 * (district_risk - 1.0)
         - 0.38 * exercise
         + rng.normal(0, 0.80, size)
     )
@@ -190,11 +248,16 @@ def generate_chunk(rng: np.random.Generator, start: int, size: int) -> pd.DataFr
     stroke_risk_score = risk_score + 0.25 * hypertension + 0.18 * (salt_intake_g_day > 8)
     stroke_risk_score += rng.normal(0, 0.45, size)
 
-    label_chd = sample_binary_by_score(heart_risk_score, 0.115)
-    label_heart_attack = sample_binary_by_score(heart_risk_score + rng.normal(0, 0.9, size), 0.010)
-    label_heart_failure = sample_binary_by_score(heart_risk_score + 0.25 * age_factor + rng.normal(0, 0.9, size), 0.015)
-    label_heart = ((label_chd == 1) | (label_heart_attack == 1) | (label_heart_failure == 1)).astype(np.int8)
-    label_stroke = sample_binary_by_score(stroke_risk_score, 0.025)
+    label_heart = sample_binary_by_score(
+        heart_risk_score, EVENT_LABEL_RATES["heart"]
+    )
+    label_stroke = sample_binary_by_score(
+        stroke_risk_score, EVENT_LABEL_RATES["stroke"]
+    )
+    # 保留旧字段以兼容现有表结构；当前 DWS 标签以年度事件代理为准。
+    label_chd = label_heart.copy()
+    label_heart_attack = label_heart.copy()
+    label_heart_failure = np.zeros(size, dtype=np.int8)
 
     # target_disease preserves the existing project's 0/1/2 contract. The
     # independent labels above retain co-morbidity information for the newer design.
@@ -207,8 +270,6 @@ def generate_chunk(rng: np.random.Generator, start: int, size: int) -> pd.DataFr
         rng.random(size) < BASE_RATES["annual_heart_attack_event"] * np.clip(1 + 1.8 * (heart_risk_score > np.median(heart_risk_score)), 0.5, 3.0)
     ).astype(np.int8)
 
-    district = rng.choice(DISTRICTS, size=size, p=DISTRICT_PROBABILITIES)
-    district_code = pd.Categorical(district, categories=DISTRICTS).codes.astype(np.int16) + 1
     community_number = rng.integers(1, 101, size=size, dtype=np.int16)
     community_id = district_code * 1000 + community_number
     age_group = pd.cut(
@@ -234,6 +295,7 @@ def generate_chunk(rng: np.random.Generator, start: int, size: int) -> pd.DataFr
             "region": "成都市",
             "district": district,
             "community_id": community_id,
+            "risk_cluster": risk_cluster,
             "height_cm": height_cm,
             "weight_kg": weight_kg,
             "systolic_bp": systolic_bp,
@@ -289,6 +351,8 @@ def generate_dataset(rows: int, seed: int, output: Path, chunk_size: int) -> dic
         "seed": seed,
         "source_document": "mydocs/成都居民健康数据.md",
         "base_rates": BASE_RATES,
+        "event_label_rates": EVENT_LABEL_RATES,
+        "label_semantics": "年度事件代理标签，不是模型筛查高危率或临床诊断率。",
         "observed_rates": {
             "hypertension": round(float(validation["hypertension"].mean()), 6),
             "diabetes": round(float(validation["diabetes"].mean()), 6),
@@ -299,6 +363,13 @@ def generate_dataset(rows: int, seed: int, output: Path, chunk_size: int) -> dic
             "exercise": round(float(validation["exercise"].mean()), 6),
             "alcohol": round(float(validation["alcohol"].mean()), 6),
             "secondhand_smoke_all": round(float(validation["secondhand_smoke"].mean()), 6),
+            "risk_cluster": round(float(validation["risk_cluster"].mean()), 6),
+            "risk_cluster_heart_rate": round(
+                float(validation.loc[validation["risk_cluster"] == 1, "label_heart"].mean()), 6
+            ),
+            "risk_cluster_stroke_rate": round(
+                float(validation.loc[validation["risk_cluster"] == 1, "label_stroke"].mean()), 6
+            ),
             "target_disease_0": round(float((validation["target_disease"] == 0).mean()), 6),
             "target_disease_1": round(float((validation["target_disease"] == 1).mean()), 6),
             "target_disease_2": round(float((validation["target_disease"] == 2).mean()), 6),

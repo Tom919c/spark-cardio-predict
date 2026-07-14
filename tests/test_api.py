@@ -5,6 +5,7 @@ from sklearn.isotonic import IsotonicRegression
 
 from src import create_app
 from src.ml.calibrated_model import CalibratedRiskModel
+from src.services.risk_service import RiskService
 from config import BaseConfig
 
 
@@ -118,3 +119,12 @@ def test_train_estimate_reports_missing_dataset_clearly(tmp_path):
 
     assert response.status_code == 400
     assert "Dataset" in response.get_json()["message"]
+
+
+def test_disease_specific_threshold_and_multifactor_alert_do_not_show_as_healthy():
+    service = RiskService(BaseConfig.as_dict())
+    severe = dict(zip(FEATURES, [35, 1, 35, 3, 1, 1, 2, 1, 0]))
+
+    assert service._build_final_category(0.02, 0.05, {}, 0, 1) == 2
+    assert service._risk_level(0.05, 2)["code"] == 2
+    assert service._build_final_category(0.10, 0.01, severe, 0, 0) == 4

@@ -4,10 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CardioSpark AI 预测结果</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script src="{{ url_for('static', filename='tailwind/tailwind.js') }}"></script>
+  <script src="{{ url_for('static', filename='echarts/echarts.min.js') }}"></script>
   <style>
     @import url("{{ url_for('static', filename='css/page-switcher.css') }}");
+    @import url("{{ url_for('static', filename='css/phase2.css') }}");
     :root {
       --bg-1: #f4f8ff;
       --bg-2: #edf5ff;
@@ -366,6 +367,11 @@
             <div id="suggestionsList" class="list-wrap"></div>
           </div>
         </div>
+
+        <div class="list-card" style="margin-top:14px;">
+          <div class="meta">What-if 结果 / Scenario Result</div>
+          <div id="phase2WhatIf" class="phase2-empty" style="margin-top:10px;"></div>
+        </div>
       </div>
     </section>
   </div>
@@ -375,14 +381,16 @@
       0: "当前未见明显高风险",
       1: "心脏风险偏高",
       2: "卒中风险偏高",
-      3: "心脑血管双高风险"
+      3: "心脑血管双高风险",
+      4: "多因素风险提示"
     };
 
     const badgeClassMap = {
       0: { cls: "pill risk-low", text: "低风险提示" },
       1: { cls: "pill risk-mid", text: "重点关注" },
       2: { cls: "pill risk-mid", text: "重点关注" },
-      3: { cls: "pill risk-high", text: "高风险预警" }
+      3: { cls: "pill risk-high", text: "高风险预警" },
+      4: { cls: "pill risk-mid", text: "危险因素提示" }
     };
 
     let gaugeChart = null;
@@ -501,5 +509,6 @@
       if (gaugeChart) gaugeChart.resize();
     });
   </script>
+  <script src="{{ url_for('static', filename='js/phase2.js') }}" defer></script>
 </body>
 </html>

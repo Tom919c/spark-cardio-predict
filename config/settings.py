@@ -1,8 +1,9 @@
-"""项目配置：本地 Flask 与 WSL Spark 共用的环境变量解析层。"""
+"""项目配置：当前运行环境中的 Flask/Spark 与 VMware HDFS 共用的解析层。"""
 
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
 
 
@@ -63,7 +64,7 @@ class BaseConfig:
     DATA_MODE = os.getenv("DATA_MODE", "local").strip().lower()
     DISTRIBUTED_MODE_ENABLED = DATA_MODE == "hdfs"
     DATASET_FILE_PATH = _project_path(
-        os.getenv("DATASET_FILE_PATH", "data/raw/CVD_Standard_DWD.csv")
+        os.getenv("DATASET_FILE_PATH", "data/raw/CVD_Standard_DWD_refined.csv")
     )
     POPULATION_DATASET_PATH = _project_path(
         os.getenv(
@@ -83,9 +84,44 @@ class BaseConfig:
     DATASET_ENCODING = os.getenv("DATASET_ENCODING", "utf-8")
     DATASET_SEPARATOR = os.getenv("DATASET_SEPARATOR", ",")
 
-    # 仅在 WSL2/VMware Linux 且 DATA_MODE=hdfs 时读取以下伪分布式参数。
+    # 阶段二数据集、任务和本地开发配置。
+    DATABASE_TYPE = os.getenv("DATABASE_TYPE", "sqlite").strip().lower()
+    DATABASE_PATH = _project_path(
+        os.getenv("DATABASE_PATH", "data/localstorage/app.db")
+    )
+    MYSQL_HOST = os.getenv("MYSQL_HOST", "127.0.0.1")
+    MYSQL_PORT = _as_int("MYSQL_PORT", 3306)
+    MYSQL_USER = os.getenv("MYSQL_USER", "root")
+    MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "")
+    MYSQL_DATABASE = os.getenv("MYSQL_DATABASE", "cardiospark")
+    UPLOAD_ROOT = _project_path(
+        os.getenv("UPLOAD_ROOT", "data/localstorage/uploads")
+    )
+    LOCAL_RESULT_ROOT = _project_path(
+        os.getenv("LOCAL_RESULT_ROOT", "data/localstorage/results")
+    )
+    UPLOAD_MAX_FILE_SIZE = _as_int("UPLOAD_MAX_FILE_SIZE", 512 * 1024 * 1024)
+    UPLOAD_CHUNK_SIZE = _as_int("UPLOAD_CHUNK_SIZE", 8 * 1024 * 1024)
+    LOCAL_ANALYSIS_CHUNK_SIZE = _as_int("LOCAL_ANALYSIS_CHUNK_SIZE", 100_000)
+    TASK_WORKERS = _as_int("TASK_WORKERS", 2)
+    PRIVACY_MIN_GROUP_SIZE = _as_int("PRIVACY_MIN_GROUP_SIZE", 5)
+    KNOWLEDGE_BASE_PATH = _project_path(
+        os.getenv(
+            "KNOWLEDGE_BASE_PATH", "resources/knowledge/intervention_rules.json"
+        )
+    )
+    MAP_ASSET_DIR = _project_path(os.getenv("MAP_ASSET_DIR", "static/geo"))
+    SPARK_ANALYSIS_SCRIPT = _project_path(
+        os.getenv("SPARK_ANALYSIS_SCRIPT", "scripts/run_phase2_analysis.py")
+    )
+    # Spark 在当前应用所在环境中原生执行，VMware Ubuntu 提供 HDFS 存储。
+    SPARK_SCORE_ENGINE = os.getenv("SPARK_SCORE_ENGINE", "pandas").strip().lower()
+
+    # DATA_MODE=hdfs 时使用以下 HDFS 参数；地址由每位成员在 .env 中填写。
     HDFS_NAMENODE_URI = os.getenv("HDFS_NAMENODE_URI", "hdfs://localhost:9000")
     HDFS_WEB_URL = os.getenv("HDFS_WEB_URL", "http://localhost:9870")
+    # WebHDFS 重定向到不可达主机名时，在本机 .env 中覆盖为可达地址。
+    HDFS_DATANODE_HOST = os.getenv("HDFS_DATANODE_HOST", "")
     # 默认使用当前系统用户，团队成员可在 .env 中覆盖为 Hadoop 用户名。
     HDFS_USER = (
         os.getenv("HDFS_USER")
@@ -104,7 +140,14 @@ class BaseConfig:
     HDFS_FEATURE_PATH = os.getenv(
         "HDFS_FEATURE_PATH", f"/user/{HDFS_USER}/cardiospark/feature"
     )
+    HDFS_UPLOAD_ROOT = os.getenv(
+        "HDFS_UPLOAD_ROOT", f"{HDFS_RAW_PATH}/_uploads"
+    )
+    HDFS_RESULT_ROOT = os.getenv(
+        "HDFS_RESULT_ROOT", f"{HDFS_FEATURE_PATH}/ads"
+    )
     SPARK_SUBMIT_BIN = os.getenv("SPARK_SUBMIT_BIN", "spark-submit")
+    SPARK_PYTHON = os.getenv("SPARK_PYTHON", sys.executable)
 
     CARDIO_FEATURE_COLUMNS = [
         "age",
@@ -121,10 +164,16 @@ class BaseConfig:
     HEART_LABEL_COLUMN = "label_heart"
     STROKE_LABEL_COLUMN = "label_stroke"
     TRAIN_TEST_SPLIT_RATIO = _as_float("TRAIN_TEST_SPLIT_RATIO", 0.2)
-    RANDOM_STATE = _as_int("RANDOM_STATE", 42)
-    RANDOM_FOREST_TREES = _as_int("RANDOM_FOREST_TREES", 200)
-    MINORITY_OVERSAMPLE_RATIO = _as_float("MINORITY_OVERSAMPLE_RATIO", 0.15)
-    MINORITY_MAX_MULTIPLIER = _as_float("MINORITY_MAX_MULTIPLIER", 3.0)
+    RANDOM_STATE = _as_int("RANDOM_STATE", 20260714)
+    XGBOOST_TREES = _as_int("XGBOOST_TREES", 850)
+    XGBOOST_MAX_DEPTH = _as_int("XGBOOST_MAX_DEPTH", 5)
+    XGBOOST_LEARNING_RATE = _as_float("XGBOOST_LEARNING_RATE", 0.05)
+    XGBOOST_MIN_CHILD_WEIGHT = _as_float("XGBOOST_MIN_CHILD_WEIGHT", 6.0)
+    XGBOOST_SUBSAMPLE = _as_float("XGBOOST_SUBSAMPLE", 0.85)
+    XGBOOST_COLSAMPLE_BYTREE = _as_float("XGBOOST_COLSAMPLE_BYTREE", 0.90)
+    XGBOOST_GAMMA = _as_float("XGBOOST_GAMMA", 0.0)
+    XGBOOST_REG_ALPHA = _as_float("XGBOOST_REG_ALPHA", 0.0)
+    XGBOOST_REG_LAMBDA = _as_float("XGBOOST_REG_LAMBDA", 2.0)
     STROKE_MIN_RECALL = _as_float("STROKE_MIN_RECALL", 0.70)
 
     # 阶段一固定为两个独立事件模型，不在此处扩展额外疾病类型。
@@ -137,7 +186,7 @@ class BaseConfig:
     @classmethod
     def as_dict(cls) -> dict:
         return {
-            key: value
-            for key, value in cls.__dict__.items()
+            key: getattr(cls, key)
+            for key in dir(cls)
             if key.isupper() and not key.startswith("_")
         }

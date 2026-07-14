@@ -5,4 +5,7 @@ joblib==1.5.3
 pyspark==4.1.2
 hdfs==2.7.3
 shap==0.51.0
+xgboost==3.2.0
 pytest==9.1.1
+PyMySQL==1.1.1
+Faker==37.4.0

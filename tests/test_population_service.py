@@ -21,12 +21,32 @@ def test_population_dashboard_and_follow_up_use_cached_dataframe(tmp_path):
     second = PopulationService({"POPULATION_DATASET_PATH": str(dataset)}).dashboard()
 
     assert first["total_residents"] == 3
+    assert first["high_risk_count"] == 2
     assert first["high_risk_follow_up_count"] == 2
-    assert first["districts"][0]["residents"] == 2
-    assert len(service.follow_up_list(limit=10)) == 2
-    assert "screening_basis" in service.follow_up_list(limit=1)[0]
+    assert first["districts"][0]["residents"] is None
+    assert first["districts"][0]["suppressed"] is True
+    assert len(service.follow_up_list(limit=10)) == 0
     assert first == second
     assert len(PopulationService._dataframe_cache) >= 1
+
+
+def test_follow_up_does_not_require_an_age_threshold():
+    dataframe = pd.DataFrame(
+        {
+            "age": [42, 42],
+            "label_heart": [1, 0],
+            "label_stroke": [0, 0],
+            "hypertension": [0, 0],
+            "diabetes": [0, 0],
+            "cholesterol": [1, 1],
+            "smoker": [0, 0],
+            "bmi": [23.0, 23.0],
+        }
+    )
+
+    mask = PopulationService._follow_up_mask(dataframe)
+
+    assert mask.tolist() == [True, False]
 
 
 def test_population_service_reports_missing_file(tmp_path):

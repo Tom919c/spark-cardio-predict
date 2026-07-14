@@ -4,12 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CardioSpark 心脑血管疾病智慧公卫决策大屏</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js">
-</script>
-<script src="https://cdn.jsdelivr.net/npm/echarts-wordcloud@2.1.0/dist/echarts-wordcloud.min.js">
-</script>
+<script src="{{ url_for('static', filename='tailwind/tailwind.js') }}"></script>
+<script src="{{ url_for('static', filename='echarts/echarts.min.js') }}"></script>
+<script src="{{ url_for('static', filename='echarts/echarts-wordcloud.min.js') }}" onerror="this.remove();"></script>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/page-switcher.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/phase2.css') }}">
 <style>
   /* ===== 全局基础样式 ===== */
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -427,6 +426,11 @@
 <!-- ============================================================ -->
 <main class="p-4" style="max-width:1920px; margin:0 auto;">
 
+  <div id="institutionEmptyState" class="phase2-empty" style="display:none;margin-bottom:16px;padding:24px;text-align:center;">
+    <div style="font-size:20px;font-weight:700;color:#E2E8F0;margin-bottom:8px;">等待上传社区居民数据</div>
+    <div style="color:#94A3B8;">当前机构端尚未完成居民数据分析。请在下方上传 CSV，任务完成后本页面会自动刷新为本次数据集的分析结果。</div>
+  </div>
+
   <!-- ===== 数据概览卡片 ===== -->
   <!-- 桌面4列 -> 平板2列 -> 手机2列(grid-cols-2) -> 小屏手机1列  -->
   <section class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 md:gap-4 mb-3 md:mb-4" id="statsOverview">
@@ -452,15 +456,15 @@
         <div class="stat-sub">占筛查总人数 <span id="highRiskPct">--</span></div>
       </div>
     </div>
-    <!-- 双风险标签率 -->
+    <!-- 双事件标签率 -->
     <div class="stat-card stat-card-enter" style="animation-delay:0.3s;">
       <div class="stat-icon icon-orange">
         <svg viewBox="0 0 24 24" fill="none" stroke="#FF7D00" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
       </div>
       <div class="stat-body">
-        <div class="stat-label">双风险标签率</div>
+        <div class="stat-label" id="statAvgProbLabel">双事件模型高风险率</div>
         <div class="stat-value" id="statAvgProb">--</div>
-        <div class="stat-sub">基于成都仿真标签聚合</div>
+        <div class="stat-sub" id="statAvgProbSub">基于当前上传数据的双模型评分</div>
       </div>
     </div>
     <!-- 待随访人数 -->
@@ -478,7 +482,7 @@
 
   <!-- ===== 三栏核心布局 ===== -->
   <!-- 桌面 12col -> 平板/手机堆叠 -->
-  <section class="grid grid-cols-12 gap-3 md:gap-4" style="min-height:auto;">
+  <section id="dashboardVisualization" class="grid grid-cols-12 gap-3 md:gap-4" style="min-height:auto;">
 
     <!-- ======== 左侧栏 ======== -->
     <div class="col-span-12 xl:col-span-3 flex flex-col gap-3 md:gap-4">
@@ -500,9 +504,9 @@
     <!-- ======== 中间核心区 ======== -->
     <div class="col-span-12 xl:col-span-6 flex flex-col gap-3 md:gap-4">
 
-      <!-- 四川省风险热力地图 -->
+      <!-- 动态区域风险分布 -->
       <div class="dash-card anim-enter" style="animation-delay:0.15s;">
-        <div class="card-title"><span class="accent-dot"></span>四川省心脑血管疾病风险热力地图</div>
+        <div class="card-title"><span class="accent-dot"></span><span id="mapScopeLabel">区域心脑血管疾病风险分布</span></div>
         <div id="mapChart" class="chart-container" style="height:380px;"></div>
       </div>
 
@@ -549,6 +553,37 @@
 
     </div>
 
+  </section>
+
+  <section class="phase2-grid phase2-grid--3" style="margin-top:16px;">
+    <div class="phase2-card" id="phase2UploadPanel">
+      <h3 class="phase2-title">机构上传 / 分片进度 / 任务轮询</h3>
+      <div class="phase2-muted" style="margin-bottom:10px;">前端只负责上传、分片和轮询展示；业务结果仍由后端接口返回。</div>
+      <input id="phase2UploadFile" type="file" class="phase2-muted" style="display:block;margin-bottom:10px;width:100%;">
+      <div class="phase2-inline-actions" style="margin-bottom:10px;">
+        <button type="button" class="phase2-btn" id="phase2UploadStart">开始上传</button>
+        <span class="phase2-pill">任务ID：<span id="phase2UploadTaskId">--</span></span>
+      </div>
+      <div class="phase2-progress" aria-label="上传进度"><span id="phase2UploadProgress"></span></div>
+      <div class="phase2-progress" style="margin-top:8px;" aria-label="分片进度"><span id="phase2UploadChunkProgress"></span></div>
+      <div class="phase2-muted" id="phase2UploadChunk" style="margin-top:8px;">分片上传状态会在这里显示。</div>
+      <div class="phase2-empty" id="phase2UploadStatus" style="margin-top:10px;">请选择文件后开始上传。</div>
+      <div class="phase2-upload-result" id="phase2UploadResult" style="margin-top:10px;">
+        <div class="phase2-muted">分析完成后将在这里显示本次数据集的汇总结果。</div>
+      </div>
+    </div>
+
+    <div class="phase2-card">
+      <h3 class="phase2-title">区域分析与展示模式</h3>
+      <div class="phase2-muted" id="phase2MapMode">加载中...</div>
+      <div id="phase2RegionTable" style="margin-top:10px;"></div>
+    </div>
+
+    <div class="phase2-card">
+      <h3 class="phase2-title">快照趋势</h3>
+      <div class="phase2-muted" style="margin-bottom:10px;">用于查看最近一次评估与后续快照的变化，不会伪造未返回的数据。</div>
+      <div id="snapshotTrendChart" class="chart-container" style="height:240px;"></div>
+    </div>
   </section>
 </main>
 
@@ -607,11 +642,14 @@
   }
 
   /** 获取地图 visualMap 位置配置（移动端下移到底部） */
-  function getMapVisualMapOpt() {
+  function getMapVisualMapOpt(minValue, maxValue) {
     var isMobile = isMobileViewport();
+    var min = Number.isFinite(Number(minValue)) ? Number(minValue) : 0;
+    var max = Number.isFinite(Number(maxValue)) ? Number(maxValue) : 85;
+    if (max <= min) max = min + 1;
     return {
-      min: 0,
-      max: 85,
+      min: min,
+      max: max,
       left: isMobile ? 'center' : 'left',
       bottom: isMobile ? 0 : 0,
       top: isMobile ? 'auto' : undefined,
@@ -641,11 +679,17 @@
       if (!json.success) throw new Error(json.message || '请求失败');
        var data = json.data || {};
        if (endpoint === 'summary') {
-         var average = (Number(data.heart_risk_rate) + Number(data.stroke_risk_rate)) / 2;
+         var dualRiskRate = Number(data.comorbidity_rate);
          return {
+           has_data: data.has_data !== false,
+           initialized: data.initialized !== false,
+           data_source: data.data_source || null,
+           data_period: data.data_period || null,
+           coverage_name: data.coverage_name || (data.coverage && data.coverage.coverage_name) || null,
+           risk_metric_source: data.risk_metric_source || 'unavailable',
            total_screening_count: Number(data.total_residents) || 0,
-           high_risk_count: Number(data.high_risk_follow_up_count) || 0,
-           avg_disease_probability: Number.isFinite(average) ? average : 0,
+           high_risk_count: Number(data.high_risk_count != null ? data.high_risk_count : data.high_risk_follow_up_count) || 0,
+           dual_risk_rate: Number.isFinite(dualRiskRate) ? dualRiskRate : 0,
            pending_followup_count: Number(data.high_risk_follow_up_count) || 0
          };
        }
@@ -668,24 +712,29 @@
         };
       }
       if (endpoint === 'map') {
-        return [{
-          province: '四川省',
-          risk_value: averageRiskScore(data),
-          risk_level: valueToRiskLevel(averageRiskScore(data))
-        }];
+        return {
+          coverage: data.coverage || {
+            coverage_level: data.coverage_level || 'unknown',
+            coverage_name: data.coverage_name || '未知区域',
+            map_name: data.map_name || null,
+            map_available: data.map_available === true
+          },
+          regions: Array.isArray(data.districts) ? data.districts : (Array.isArray(data.regions) ? data.regions : []),
+          risk_value: averageRiskScore(data)
+        };
       }
       if (endpoint === 'followup') {
         return data;
       }
-      return {
-         feature_importance: (Array.isArray(data.risk_factors) ? data.risk_factors : []).map(function(item) {
-           return { feature_name: item.name, importance: item.rate };
-         }),
-         age_pyramid: (Array.isArray(data.age_groups) ? data.age_groups : []).map(function(item) {
+         return {
+           feature_importance: (Array.isArray(data.risk_factors) ? data.risk_factors : []).map(function(item) {
+             return { feature_name: item.name, importance: Number(item.rate) || 0 };
+           }),
+           age_pyramid: (Array.isArray(data.age_groups) ? data.age_groups : []).map(function(item) {
           return {
             age_group: item.age_group,
-            heart_count: item.heart,
-            stroke_count: item.stroke
+            heart_count: Number(item.heart) || 0,
+            stroke_count: Number(item.stroke) || 0
           };
         })
       };
@@ -702,6 +751,7 @@
   // =============================================================
 
   /* ---------- 6a. 概览卡片 ---------- */
+  var activeDataPeriod = null;
   function renderOverview(data) {
     document.getElementById('statTotalScreening').textContent = formatNum(data.total_screening_count);
     document.getElementById('statHighRisk').textContent = formatNum(data.high_risk_count);
@@ -709,8 +759,34 @@
       ? (data.high_risk_count / data.total_screening_count * 100).toFixed(1)
       : '0.0';
     document.getElementById('highRiskPct').textContent = pct + '%';
-    document.getElementById('statAvgProb').textContent = data.avg_disease_probability.toFixed(1) + '%';
+    document.getElementById('statAvgProb').textContent = data.dual_risk_rate.toFixed(1) + '%';
     document.getElementById('statPendingFollowup').textContent = formatNum(data.pending_followup_count);
+    var regionDisplay = document.getElementById('regionDisplay');
+    if (regionDisplay) regionDisplay.textContent = data.coverage_name || '当前上传区域';
+    activeDataPeriod = data.data_period || null;
+    var metricLabel = document.getElementById('statAvgProbLabel');
+    var metricSub = document.getElementById('statAvgProbSub');
+    if (metricLabel) metricLabel.textContent = data.risk_metric_source === 'labels' ? '双事件标签率' : '双事件模型高风险率';
+    if (metricSub) metricSub.textContent = data.risk_metric_source === 'labels' ? '事件标签聚合结果' : '基于当前上传数据的双模型评分';
+  }
+
+  function renderInstitutionEmptyState(isEmpty) {
+    var empty = document.getElementById('institutionEmptyState');
+    var stats = document.getElementById('statsOverview');
+    var visualization = document.getElementById('dashboardVisualization');
+    if (empty) empty.style.display = isEmpty ? 'block' : 'none';
+    if (stats) stats.style.display = isEmpty ? 'none' : '';
+    if (visualization) visualization.style.display = isEmpty ? 'none' : '';
+    if (isEmpty) {
+      var regionDisplay = document.getElementById('regionDisplay');
+      if (regionDisplay) regionDisplay.textContent = '等待上传数据';
+      activeDataPeriod = null;
+      var mapMode = document.getElementById('phase2MapMode');
+      if (mapMode) mapMode.textContent = '等待上传居民数据';
+      var regionTable = document.getElementById('phase2RegionTable');
+      if (regionTable) regionTable.innerHTML = '<div class="phase2-empty">上传并完成分析后，这里将显示区域统计。</div>';
+      renderFollowUpTable([]);
+    }
   }
 
   /* ---------- 6b. 雷达图 ---------- */
@@ -803,18 +879,39 @@
   }
 
   /* ---------- 6d. 地图 ---------- */
-  function renderMap(data) {
+  function renderMap(payload) {
     var dom = document.getElementById('mapChart');
     if (!dom) return;
+    var coverage = payload.coverage || {};
+    var regions = Array.isArray(payload.regions) ? payload.regions : [];
+    var label = document.getElementById('mapScopeLabel');
+    if (label) label.textContent = (coverage.coverage_name || '区域') + '风险分布';
+    if (coverage.map_available !== true || coverage.coverage_level !== 'district') {
+      dom.innerHTML = '<div class="phase2-region-fallback"><div class="phase2-region-fallback__title">当前数据适合使用排名统计</div>' +
+        (regions.length ? '<table class="phase2-table"><thead><tr><th>区域</th><th>人数</th><th>心脏风险率</th><th>卒中风险率</th></tr></thead><tbody>' +
+          regions.map(function(item) { return '<tr><td>' + (item.region || item.district || item.community || '未知') + '</td><td>' + (item.residents == null ? '已匿名' : item.residents) + '</td><td>' + (item.heart_rate == null ? '--' : item.heart_rate + '%') + '</td><td>' + (item.stroke_rate == null ? '--' : item.stroke_rate + '%') + '</td></tr>'; }).join('') +
+          '</tbody></table>' : '<div class="phase2-empty">暂无可展示的区域明细</div>') + '</div>';
+      return;
+    }
     var chart = echarts.init(dom);
 
-    var mapData = data.map(function(d) {
+    var mapData = regions.map(function(d) {
+      var heartRate = Number(d.heart_rate) || 0;
+      var strokeRate = Number(d.stroke_rate) || 0;
+      var comorbidityRate = Number(d.comorbidity_rate) || 0;
+      var riskValue = heartRate * 0.6 + strokeRate * 0.4 + comorbidityRate * 0.8;
       return {
-        name: d.province,
-        value: d.risk_value,
-        riskLevel: d.risk_level
+        name: d.district || d.region,
+        value: riskValue,
+        riskLevel: valueToRiskLevel(riskValue)
       };
     });
+    var mapValues = mapData.map(function(item) { return Number(item.value) || 0; });
+    var mapMin = Math.min.apply(null, mapValues);
+    var mapMax = Math.max.apply(null, mapValues);
+    var mapSpan = Math.max(mapMax - mapMin, 0.5);
+    mapMin = Math.max(0, mapMin - mapSpan * 0.15);
+    mapMax = mapMax + mapSpan * 0.15;
 
     var isMobile = isMobileViewport();
 
@@ -831,10 +928,10 @@
         borderColor: '#165DFF',
         textStyle: { color: '#E2E8F0', fontSize: 12 }
       },
-      visualMap: getMapVisualMapOpt(),
+      visualMap: getMapVisualMapOpt(mapMin, mapMax),
       series: [{
         type: 'map',
-        map: 'china',
+        map: coverage.map_name || 'chengdu',
         roam: isMobile ? false : false,
         label: {
           show: !isMobile,
@@ -862,7 +959,9 @@
     if (!dom) return;
     var chart = echarts.init(dom);
     var names = data.map(function(d) { return d.feature_name; }).reverse();
-    var values = data.map(function(d) { return d.importance; }).reverse();
+    var values = data.map(function(d) { return Number(d.importance) || 0; }).reverse();
+    var largestImportance = Math.max.apply(null, values.concat([1]));
+    var importanceAxisMax = Math.ceil(largestImportance * 1.15 / 5) * 5;
     var colors = values.map(function(v) {
       if (v >= 15) return '#F53F3F';
       if (v >= 10) return '#FF7D00';
@@ -884,7 +983,8 @@
       grid: { top: 10, bottom: 10, left: 10, right: 30, containLabel: true },
       xAxis: {
         type: 'value',
-        max: 25,
+        min: 0,
+        max: importanceAxisMax,
         axisLabel: { color: '#64748B', fontSize: 10 },
         splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
         axisLine: { show: false }
@@ -920,7 +1020,7 @@
           position: 'right',
           color: '#94A3B8',
           fontSize: 10,
-          formatter: function(p) { return p.value + '%'; }
+          formatter: function(p) { return Number(p.value).toFixed(2) + '%'; }
         }
       }]
     });
@@ -934,8 +1034,10 @@
     var chart = echarts.init(dom);
 
     var groups = data.map(function(d) { return d.age_group; });
-    var heartVals = data.map(function(d) { return d.heart_count; });
-    var strokeVals = data.map(function(d) { return -d.stroke_count; });
+    var heartVals = data.map(function(d) { return Number(d.heart_count) || 0; });
+    var strokeVals = data.map(function(d) { return -(Number(d.stroke_count) || 0); });
+    var largestCount = Math.max.apply(null, heartVals.concat(strokeVals.map(function(value) { return Math.abs(value); })).concat([1]));
+    var axisMax = Math.ceil(largestCount * 1.15);
     var isMobile = isMobileViewport();
 
     chart.setOption({
@@ -951,7 +1053,13 @@
         borderColor: '#165DFF',
         textStyle: { color: '#E2E8F0', fontSize: 12 }
       },
-      grid: { top: 10, bottom: 10, left: 10, right: 10, containLabel: true },
+      legend: {
+        data: ['心脏事件', '脑卒中'],
+        top: 0,
+        right: 4,
+        textStyle: { color: '#94A3B8', fontSize: 10 }
+      },
+      grid: { top: 28, bottom: 10, left: 10, right: 10, containLabel: true },
       xAxis: [{
         type: 'value',
         axisLabel: {
@@ -961,8 +1069,8 @@
         },
         splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
         axisLine: { show: false },
-        min: -6000,
-        max: 6000
+        min: -axisMax,
+        max: axisMax
       }],
       yAxis: {
         type: 'category',
@@ -1054,6 +1162,10 @@
     document.getElementById('clockDisplay').textContent = timeStr;
   }
   function updateTimestamp() {
+    if (activeDataPeriod) {
+      document.getElementById('dataTimestamp').textContent = activeDataPeriod + ' 数据快照';
+      return;
+    }
     var now = new Date();
     var ts = now.getFullYear() + '-' +
       String(now.getMonth()+1).padStart(2,'0') + '-' +
@@ -1066,11 +1178,15 @@
   // =============================================================
   // 7. 加载中国地图 GeoJSON 并初始化所有图表
   // =============================================================
+  var dashboardTimersStarted = false;
   function initAll() {
-    updateClock();
-    updateTimestamp();
-    setInterval(updateClock, 1000);
-    setInterval(updateTimestamp, 30000);
+    if (!dashboardTimersStarted) {
+      updateClock();
+      updateTimestamp();
+      setInterval(updateClock, 1000);
+      setInterval(updateTimestamp, 30000);
+      dashboardTimersStarted = true;
+    }
 
     /* 概览、画像、群体特征和地图共用群体分析接口。 */
     Promise.all([
@@ -1086,6 +1202,12 @@
       var preprocess = results[3];
       var followUps = results[4];
 
+      if (overview.has_data === false) {
+        renderInstitutionEmptyState(true);
+        return;
+      }
+      renderInstitutionEmptyState(false);
+
       renderOverview(overview);
       renderRadar(community.radar);
       renderWordCloud(community.word_cloud);
@@ -1095,9 +1217,9 @@
         var screeningScore = Math.min(5, Math.max(0, Number(row.risk_score || 0)));
         var level = valueToRiskLevel(screeningScore / 5 * 100);
         return {
-          name: '居民' + String(index + 1).padStart(3, '0'),
+          name: row.name || ('居民' + String(index + 1).padStart(3, '0')),
           age: row.age,
-          community: row.district,
+          community: row.community || row.district || row.community_id || '--',
           screening_score: screeningScore,
           risk_level: level,
           followup_note: level >= 4 ? '7日内重点随访' : '30日内常规随访'
@@ -1110,14 +1232,24 @@
     });
   }
 
+  window.refreshInstitutionDashboard = function() {
+    initAll();
+  };
+
   /** 加载中国地图 GeoJSON 并渲染地图（带移动端重试与 resize 重建） */
-  function loadMapAndRender(mapData) {
-    var mapUrl = 'https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json';
+  function loadMapAndRender(payload) {
+    var coverage = payload.coverage || {};
+    if (coverage.map_available !== true || coverage.coverage_level !== 'district') {
+      renderMap(payload);
+      return;
+    }
+    var mapName = coverage.map_name || 'chengdu';
+    var mapUrl = '/static/geo/' + mapName + '.json';
 
     try {
-      var existing = echarts.getMap('china');
+      var existing = echarts.getMap(mapName);
       if (existing) {
-        renderMap(mapData);
+        renderMap(payload);
         return;
       }
     } catch(e) { /* 忽略 */ }
@@ -1128,14 +1260,14 @@
         return res.json();
       })
       .then(function(geoJson) {
-        echarts.registerMap('china', geoJson);
-        renderMap(mapData);
+        echarts.registerMap(mapName, geoJson);
+        renderMap(payload);
       })
       .catch(function(err) {
         console.warn('地图数据加载失败，使用备用方案：', err);
         var dom = document.getElementById('mapChart');
         if (dom) {
-          dom.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#64748B;font-size:14px;text-align:center;padding:16px;">地图数据暂不可用，请检查网络连接</div>';
+          renderMap({ coverage: { coverage_level: 'district', coverage_name: coverage.coverage_name, map_available: false }, regions: payload.regions || [] });
         }
       });
   }
@@ -1195,5 +1327,6 @@
     <button class="modal-btn" onclick="closeErrorModal()">我知道了</button>
   </div>
 </div>
+<script src="{{ url_for('static', filename='js/phase2.js') }}" defer></script>
 </body>
 </html>

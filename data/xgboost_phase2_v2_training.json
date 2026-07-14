@@ -1,0 +1,118 @@
+{
+  "strategy": "xgboost_with_natural_prevalence_training_isotonic_calibration_and_threshold_tuning",
+  "trained_at": "2026-07-14T04:02:54.606912+00:00",
+  "features": [
+    "age",
+    "gender",
+    "bmi",
+    "cholesterol",
+    "diabetes",
+    "hypertension",
+    "smoker",
+    "alcohol",
+    "exercise"
+  ],
+  "training_estimate": {
+    "sample_rows": 30000,
+    "benchmark_trees": 80,
+    "estimated_seconds": 29.9,
+    "estimated_minutes": 0.5,
+    "per_model_seconds": {
+      "heart": 14.5,
+      "stroke": 15.4
+    },
+    "message": "预计双模型训练耗时约 0.5 分钟，实际受 CPU、内存和数据模式影响。",
+    "benchmark_seconds": 0.2
+  },
+  "training_seconds": 14.6,
+  "targets": {
+    "heart": {
+      "target_column": "label_heart",
+      "model_path": "D:\\Code\\Pycharm\\spark-cardio-predict\\data\\models\\xgboost_heart_xgboost_phase2_v2_20260714_120246.joblib",
+      "decision_threshold": 0.10150753706693649,
+      "training_seconds": 6.5,
+      "metrics": {
+        "accuracy": 0.9278,
+        "f1_score": 0.3136,
+        "f2_score": 0.4257,
+        "precision": 0.218,
+        "recall": 0.5587,
+        "specificity": 0.939,
+        "balanced_accuracy": 0.7489,
+        "positive_rate": 0.029531,
+        "confusion_matrix": [
+          [
+            117757,
+            7647
+          ],
+          [
+            1684,
+            2132
+          ]
+        ],
+        "pr_auc": 0.2697,
+        "brier_score": 0.0243,
+        "roc_auc": 0.881,
+        "decision_threshold": 0.101508,
+        "train_positive_rate": 0.029528,
+        "test_positive_rate": 0.029531,
+        "oversampled_rows": 0
+      },
+      "feature_importance": {
+        "age": 0.03244159743189812,
+        "gender": 0.010296683758497238,
+        "bmi": 0.04499366134405136,
+        "cholesterol": 0.05017036199569702,
+        "diabetes": 0.18585306406021118,
+        "hypertension": 0.5857844352722168,
+        "smoker": 0.0596366822719574,
+        "alcohol": 0.006872359197586775,
+        "exercise": 0.023951144888997078
+      }
+    },
+    "stroke": {
+      "target_column": "label_stroke",
+      "model_path": "D:\\Code\\Pycharm\\spark-cardio-predict\\data\\models\\xgboost_stroke_xgboost_phase2_v2_20260714_120254.joblib",
+      "decision_threshold": 0.09751037508249283,
+      "training_seconds": 8.1,
+      "metrics": {
+        "accuracy": 0.8539,
+        "f1_score": 0.3697,
+        "f2_score": 0.5198,
+        "precision": 0.2497,
+        "recall": 0.7125,
+        "specificity": 0.8629,
+        "balanced_accuracy": 0.7877,
+        "positive_rate": 0.060153,
+        "confusion_matrix": [
+          [
+            104802,
+            16645
+          ],
+          [
+            2235,
+            5538
+          ]
+        ],
+        "pr_auc": 0.3987,
+        "brier_score": 0.0441,
+        "roc_auc": 0.8781,
+        "decision_threshold": 0.09751,
+        "train_positive_rate": 0.060155,
+        "test_positive_rate": 0.060153,
+        "oversampled_rows": 0
+      },
+      "feature_importance": {
+        "age": 0.028427651152014732,
+        "gender": 0.00415109982714057,
+        "bmi": 0.03136109933257103,
+        "cholesterol": 0.04176994785666466,
+        "diabetes": 0.13339082896709442,
+        "hypertension": 0.691032350063324,
+        "smoker": 0.0464131198823452,
+        "alcohol": 0.004279451444745064,
+        "exercise": 0.01917445659637451
+      }
+    }
+  }
+}

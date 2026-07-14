@@ -1,0 +1,684 @@
+{
+  "dataset": "data/raw/CVD_Standard_DWD_refined.csv",
+  "rows": 646097,
+  "partition": {
+    "fit": 0.65,
+    "selection": 0.15,
+    "holdout": 0.2
+  },
+  "configuration_count": 10,
+  "repeat_seeds": [
+    42,
+    2027,
+    7
+  ],
+  "selection_rule": "0.65 * selection PR-AUC + 0.35 * selection ROC-AUC",
+  "results": {
+    "heart": [
+      {
+        "config": "current_baseline",
+        "target": "heart",
+        "seed": 42,
+        "selection_roc_auc": 0.883742,
+        "selection_pr_auc": 0.28829,
+        "selection_score": 0.496699,
+        "holdout": {
+          "roc_auc": 0.879647,
+          "pr_auc": 0.26214,
+          "brier_score": 0.024268,
+          "decision_threshold": 0.111582,
+          "recall": 0.556405
+        },
+        "fit_seconds": 3.02
+      },
+      {
+        "config": "depth4_low_lr",
+        "target": "heart",
+        "seed": 42,
+        "selection_roc_auc": 0.884424,
+        "selection_pr_auc": 0.291264,
+        "selection_score": 0.49887,
+        "holdout": {
+          "roc_auc": 0.880875,
+          "pr_auc": 0.26292,
+          "brier_score": 0.024253,
+          "decision_threshold": 0.112329,
+          "recall": 0.54428
+        },
+        "fit_seconds": 4.87
+      },
+      {
+        "config": "depth5_low_lr",
+        "target": "heart",
+        "seed": 42,
+        "selection_roc_auc": 0.883695,
+        "selection_pr_auc": 0.289019,
+        "selection_score": 0.497156,
+        "holdout": {
+          "roc_auc": 0.879701,
+          "pr_auc": 0.262184,
+          "brier_score": 0.02428,
+          "decision_threshold": 0.113508,
+          "recall": 0.54059
+        },
+        "fit_seconds": 5.2
+      },
+      {
+        "config": "depth6_regularized",
+        "target": "heart",
+        "seed": 42,
+        "selection_roc_auc": 0.882722,
+        "selection_pr_auc": 0.285707,
+        "selection_score": 0.494662,
+        "holdout": {
+          "roc_auc": 0.878404,
+          "pr_auc": 0.259921,
+          "brier_score": 0.024322,
+          "decision_threshold": 0.110169,
+          "recall": 0.544017
+        },
+        "fit_seconds": 4.53
+      },
+      {
+        "config": "depth3_smooth",
+        "target": "heart",
+        "seed": 42,
+        "selection_roc_auc": 0.884651,
+        "selection_pr_auc": 0.292976,
+        "selection_score": 0.500062,
+        "holdout": {
+          "roc_auc": 0.881657,
+          "pr_auc": 0.26458,
+          "brier_score": 0.02424,
+          "decision_threshold": 0.112827,
+          "recall": 0.546653
+        },
+        "fit_seconds": 5.77
+      },
+      {
+        "config": "depth4_high_min_child",
+        "target": "heart",
+        "seed": 42,
+        "selection_roc_auc": 0.88452,
+        "selection_pr_auc": 0.292089,
+        "selection_score": 0.49944,
+        "holdout": {
+          "roc_auc": 0.880742,
+          "pr_auc": 0.262396,
+          "brier_score": 0.024244,
+          "decision_threshold": 0.108997,
+          "recall": 0.54428
+        },
+        "fit_seconds": 4.38
+      },
+      {
+        "config": "depth5_l1_regularized",
+        "target": "heart",
+        "seed": 42,
+        "selection_roc_auc": 0.883429,
+        "selection_pr_auc": 0.288769,
+        "selection_score": 0.4969,
+        "holdout": {
+          "roc_auc": 0.879738,
+          "pr_auc": 0.262951,
+          "brier_score": 0.024269,
+          "decision_threshold": 0.112527,
+          "recall": 0.552188
+        },
+        "fit_seconds": 4.09
+      },
+      {
+        "config": "depth5_more_subsample",
+        "target": "heart",
+        "seed": 42,
+        "selection_roc_auc": 0.883701,
+        "selection_pr_auc": 0.288899,
+        "selection_score": 0.49708,
+        "holdout": {
+          "roc_auc": 0.879959,
+          "pr_auc": 0.262371,
+          "brier_score": 0.024284,
+          "decision_threshold": 0.119632,
+          "recall": 0.540327
+        },
+        "fit_seconds": 4.58
+      },
+      {
+        "config": "depth6_low_lr",
+        "target": "heart",
+        "seed": 42,
+        "selection_roc_auc": 0.882991,
+        "selection_pr_auc": 0.287294,
+        "selection_score": 0.495788,
+        "holdout": {
+          "roc_auc": 0.878727,
+          "pr_auc": 0.261209,
+          "brier_score": 0.024302,
+          "decision_threshold": 0.114155,
+          "recall": 0.54718
+        },
+        "fit_seconds": 6.57
+      },
+      {
+        "config": "depth4_fast",
+        "target": "heart",
+        "seed": 42,
+        "selection_roc_auc": 0.884036,
+        "selection_pr_auc": 0.289272,
+        "selection_score": 0.497439,
+        "holdout": {
+          "roc_auc": 0.880527,
+          "pr_auc": 0.262433,
+          "brier_score": 0.024272,
+          "decision_threshold": 0.122324,
+          "recall": 0.53611
+        },
+        "fit_seconds": 2.92
+      }
+    ],
+    "stroke": [
+      {
+        "config": "current_baseline",
+        "target": "stroke",
+        "seed": 42,
+        "selection_roc_auc": 0.875574,
+        "selection_pr_auc": 0.408256,
+        "selection_score": 0.571817,
+        "holdout": {
+          "roc_auc": 0.876431,
+          "pr_auc": 0.391813,
+          "brier_score": 0.044257,
+          "decision_threshold": 0.091329,
+          "recall": 0.69587
+        },
+        "fit_seconds": 2.87
+      },
+      {
+        "config": "depth4_low_lr",
+        "target": "stroke",
+        "seed": 42,
+        "selection_roc_auc": 0.875898,
+        "selection_pr_auc": 0.408373,
+        "selection_score": 0.572007,
+        "holdout": {
+          "roc_auc": 0.876942,
+          "pr_auc": 0.3945,
+          "brier_score": 0.044215,
+          "decision_threshold": 0.093137,
+          "recall": 0.714396
+        },
+        "fit_seconds": 4.28
+      },
+      {
+        "config": "depth5_low_lr",
+        "target": "stroke",
+        "seed": 42,
+        "selection_roc_auc": 0.875463,
+        "selection_pr_auc": 0.407327,
+        "selection_score": 0.571175,
+        "holdout": {
+          "roc_auc": 0.876416,
+          "pr_auc": 0.392104,
+          "brier_score": 0.044242,
+          "decision_threshold": 0.091547,
+          "recall": 0.730863
+        },
+        "fit_seconds": 4.35
+      },
+      {
+        "config": "depth6_regularized",
+        "target": "stroke",
+        "seed": 42,
+        "selection_roc_auc": 0.874798,
+        "selection_pr_auc": 0.40614,
+        "selection_score": 0.57017,
+        "holdout": {
+          "roc_auc": 0.875692,
+          "pr_auc": 0.390711,
+          "brier_score": 0.044306,
+          "decision_threshold": 0.088187,
+          "recall": 0.733822
+        },
+        "fit_seconds": 3.74
+      },
+      {
+        "config": "depth3_smooth",
+        "target": "stroke",
+        "seed": 42,
+        "selection_roc_auc": 0.876159,
+        "selection_pr_auc": 0.408818,
+        "selection_score": 0.572388,
+        "holdout": {
+          "roc_auc": 0.877079,
+          "pr_auc": 0.393564,
+          "brier_score": 0.0442,
+          "decision_threshold": 0.10073,
+          "recall": 0.717484
+        },
+        "fit_seconds": 4.36
+      },
+      {
+        "config": "depth4_high_min_child",
+        "target": "stroke",
+        "seed": 42,
+        "selection_roc_auc": 0.875893,
+        "selection_pr_auc": 0.408055,
+        "selection_score": 0.571798,
+        "holdout": {
+          "roc_auc": 0.876905,
+          "pr_auc": 0.391855,
+          "brier_score": 0.04424,
+          "decision_threshold": 0.093076,
+          "recall": 0.698829
+        },
+        "fit_seconds": 3.75
+      },
+      {
+        "config": "depth5_l1_regularized",
+        "target": "stroke",
+        "seed": 42,
+        "selection_roc_auc": 0.875306,
+        "selection_pr_auc": 0.407465,
+        "selection_score": 0.571209,
+        "holdout": {
+          "roc_auc": 0.876382,
+          "pr_auc": 0.391466,
+          "brier_score": 0.044266,
+          "decision_threshold": 0.086612,
+          "recall": 0.730606
+        },
+        "fit_seconds": 3.4
+      },
+      {
+        "config": "depth5_more_subsample",
+        "target": "stroke",
+        "seed": 42,
+        "selection_roc_auc": 0.875583,
+        "selection_pr_auc": 0.407428,
+        "selection_score": 0.571282,
+        "holdout": {
+          "roc_auc": 0.876662,
+          "pr_auc": 0.391446,
+          "brier_score": 0.044244,
+          "decision_threshold": 0.092669,
+          "recall": 0.705133
+        },
+        "fit_seconds": 3.9
+      },
+      {
+        "config": "depth6_low_lr",
+        "target": "stroke",
+        "seed": 42,
+        "selection_roc_auc": 0.875004,
+        "selection_pr_auc": 0.407084,
+        "selection_score": 0.570856,
+        "holdout": {
+          "roc_auc": 0.875824,
+          "pr_auc": 0.389898,
+          "brier_score": 0.044291,
+          "decision_threshold": 0.094946,
+          "recall": 0.6969
+        },
+        "fit_seconds": 6.65
+      },
+      {
+        "config": "depth4_fast",
+        "target": "stroke",
+        "seed": 42,
+        "selection_roc_auc": 0.875662,
+        "selection_pr_auc": 0.408211,
+        "selection_score": 0.571819,
+        "holdout": {
+          "roc_auc": 0.876804,
+          "pr_auc": 0.392215,
+          "brier_score": 0.044216,
+          "decision_threshold": 0.086034,
+          "recall": 0.745143
+        },
+        "fit_seconds": 2.41
+      }
+    ]
+  },
+  "stability_runs": {
+    "heart": [
+      {
+        "config": "depth3_smooth",
+        "target": "heart",
+        "seed": 42,
+        "selection_roc_auc": 0.884651,
+        "selection_pr_auc": 0.292976,
+        "selection_score": 0.500062,
+        "holdout": {
+          "roc_auc": 0.881657,
+          "pr_auc": 0.26458,
+          "brier_score": 0.02424,
+          "decision_threshold": 0.112827,
+          "recall": 0.546653
+        },
+        "fit_seconds": 4.57
+      },
+      {
+        "config": "depth3_smooth",
+        "target": "heart",
+        "seed": 2027,
+        "selection_roc_auc": 0.884556,
+        "selection_pr_auc": 0.292813,
+        "selection_score": 0.499923,
+        "holdout": {
+          "roc_auc": 0.881886,
+          "pr_auc": 0.264726,
+          "brier_score": 0.024236,
+          "decision_threshold": 0.110151,
+          "recall": 0.544808
+        },
+        "fit_seconds": 4.48
+      },
+      {
+        "config": "depth3_smooth",
+        "target": "heart",
+        "seed": 7,
+        "selection_roc_auc": 0.884611,
+        "selection_pr_auc": 0.292606,
+        "selection_score": 0.499807,
+        "holdout": {
+          "roc_auc": 0.881332,
+          "pr_auc": 0.264306,
+          "brier_score": 0.024249,
+          "decision_threshold": 0.117808,
+          "recall": 0.54059
+        },
+        "fit_seconds": 4.36
+      },
+      {
+        "config": "depth4_high_min_child",
+        "target": "heart",
+        "seed": 42,
+        "selection_roc_auc": 0.88452,
+        "selection_pr_auc": 0.292089,
+        "selection_score": 0.49944,
+        "holdout": {
+          "roc_auc": 0.880742,
+          "pr_auc": 0.262396,
+          "brier_score": 0.024244,
+          "decision_threshold": 0.108997,
+          "recall": 0.54428
+        },
+        "fit_seconds": 3.6
+      },
+      {
+        "config": "depth4_high_min_child",
+        "target": "heart",
+        "seed": 2027,
+        "selection_roc_auc": 0.884616,
+        "selection_pr_auc": 0.291539,
+        "selection_score": 0.499116,
+        "holdout": {
+          "roc_auc": 0.880947,
+          "pr_auc": 0.263123,
+          "brier_score": 0.024271,
+          "decision_threshold": 0.120603,
+          "recall": 0.541381
+        },
+        "fit_seconds": 3.76
+      },
+      {
+        "config": "depth4_high_min_child",
+        "target": "heart",
+        "seed": 7,
+        "selection_roc_auc": 0.884509,
+        "selection_pr_auc": 0.291821,
+        "selection_score": 0.499262,
+        "holdout": {
+          "roc_auc": 0.880791,
+          "pr_auc": 0.263438,
+          "brier_score": 0.024248,
+          "decision_threshold": 0.111111,
+          "recall": 0.53611
+        },
+        "fit_seconds": 4.58
+      },
+      {
+        "config": "depth4_low_lr",
+        "target": "heart",
+        "seed": 42,
+        "selection_roc_auc": 0.884424,
+        "selection_pr_auc": 0.291264,
+        "selection_score": 0.49887,
+        "holdout": {
+          "roc_auc": 0.880875,
+          "pr_auc": 0.26292,
+          "brier_score": 0.024253,
+          "decision_threshold": 0.112329,
+          "recall": 0.54428
+        },
+        "fit_seconds": 4.63
+      },
+      {
+        "config": "depth4_low_lr",
+        "target": "heart",
+        "seed": 2027,
+        "selection_roc_auc": 0.8846,
+        "selection_pr_auc": 0.291117,
+        "selection_score": 0.498836,
+        "holdout": {
+          "roc_auc": 0.880727,
+          "pr_auc": 0.264402,
+          "brier_score": 0.024247,
+          "decision_threshold": 0.111979,
+          "recall": 0.538482
+        },
+        "fit_seconds": 4.09
+      },
+      {
+        "config": "depth4_low_lr",
+        "target": "heart",
+        "seed": 7,
+        "selection_roc_auc": 0.884366,
+        "selection_pr_auc": 0.290975,
+        "selection_score": 0.498662,
+        "holdout": {
+          "roc_auc": 0.880918,
+          "pr_auc": 0.262968,
+          "brier_score": 0.024259,
+          "decision_threshold": 0.114206,
+          "recall": 0.539009
+        },
+        "fit_seconds": 3.94
+      }
+    ],
+    "stroke": [
+      {
+        "config": "depth3_smooth",
+        "target": "stroke",
+        "seed": 42,
+        "selection_roc_auc": 0.876159,
+        "selection_pr_auc": 0.408818,
+        "selection_score": 0.572388,
+        "holdout": {
+          "roc_auc": 0.877079,
+          "pr_auc": 0.393564,
+          "brier_score": 0.0442,
+          "decision_threshold": 0.10073,
+          "recall": 0.717484
+        },
+        "fit_seconds": 4.71
+      },
+      {
+        "config": "depth3_smooth",
+        "target": "stroke",
+        "seed": 2027,
+        "selection_roc_auc": 0.87616,
+        "selection_pr_auc": 0.408628,
+        "selection_score": 0.572264,
+        "holdout": {
+          "roc_auc": 0.877071,
+          "pr_auc": 0.394288,
+          "brier_score": 0.044192,
+          "decision_threshold": 0.106396,
+          "recall": 0.699087
+        },
+        "fit_seconds": 4.88
+      },
+      {
+        "config": "depth3_smooth",
+        "target": "stroke",
+        "seed": 7,
+        "selection_roc_auc": 0.876122,
+        "selection_pr_auc": 0.408604,
+        "selection_score": 0.572235,
+        "holdout": {
+          "roc_auc": 0.876999,
+          "pr_auc": 0.394574,
+          "brier_score": 0.044181,
+          "decision_threshold": 0.108022,
+          "recall": 0.696642
+        },
+        "fit_seconds": 5.33
+      },
+      {
+        "config": "depth4_low_lr",
+        "target": "stroke",
+        "seed": 42,
+        "selection_roc_auc": 0.875898,
+        "selection_pr_auc": 0.408373,
+        "selection_score": 0.572007,
+        "holdout": {
+          "roc_auc": 0.876942,
+          "pr_auc": 0.3945,
+          "brier_score": 0.044215,
+          "decision_threshold": 0.093137,
+          "recall": 0.714396
+        },
+        "fit_seconds": 4.25
+      },
+      {
+        "config": "depth4_low_lr",
+        "target": "stroke",
+        "seed": 2027,
+        "selection_roc_auc": 0.875907,
+        "selection_pr_auc": 0.408164,
+        "selection_score": 0.571874,
+        "holdout": {
+          "roc_auc": 0.876979,
+          "pr_auc": 0.393404,
+          "brier_score": 0.044217,
+          "decision_threshold": 0.092221,
+          "recall": 0.718384
+        },
+        "fit_seconds": 4.5
+      },
+      {
+        "config": "depth4_low_lr",
+        "target": "stroke",
+        "seed": 7,
+        "selection_roc_auc": 0.875967,
+        "selection_pr_auc": 0.408559,
+        "selection_score": 0.572152,
+        "holdout": {
+          "roc_auc": 0.876835,
+          "pr_auc": 0.393021,
+          "brier_score": 0.044208,
+          "decision_threshold": 0.105263,
+          "recall": 0.693426
+        },
+        "fit_seconds": 4.27
+      },
+      {
+        "config": "depth4_fast",
+        "target": "stroke",
+        "seed": 42,
+        "selection_roc_auc": 0.875662,
+        "selection_pr_auc": 0.408211,
+        "selection_score": 0.571819,
+        "holdout": {
+          "roc_auc": 0.876804,
+          "pr_auc": 0.392215,
+          "brier_score": 0.044216,
+          "decision_threshold": 0.086034,
+          "recall": 0.745143
+        },
+        "fit_seconds": 2.88
+      },
+      {
+        "config": "depth4_fast",
+        "target": "stroke",
+        "seed": 2027,
+        "selection_roc_auc": 0.875766,
+        "selection_pr_auc": 0.407644,
+        "selection_score": 0.571487,
+        "holdout": {
+          "roc_auc": 0.876671,
+          "pr_auc": 0.39088,
+          "brier_score": 0.044226,
+          "decision_threshold": 0.096698,
+          "recall": 0.709379
+        },
+        "fit_seconds": 3.64
+      },
+      {
+        "config": "depth4_fast",
+        "target": "stroke",
+        "seed": 7,
+        "selection_roc_auc": 0.875794,
+        "selection_pr_auc": 0.40823,
+        "selection_score": 0.571877,
+        "holdout": {
+          "roc_auc": 0.876809,
+          "pr_auc": 0.393799,
+          "brier_score": 0.044219,
+          "decision_threshold": 0.088353,
+          "recall": 0.71787
+        },
+        "fit_seconds": 3.59
+      }
+    ]
+  },
+  "selected_by_stability": {
+    "heart": [
+      {
+        "config": "depth3_smooth",
+        "mean_pr_auc": 0.264537,
+        "mean_roc_auc": 0.881625,
+        "mean_brier_score": 0.024242,
+        "runs": 3
+      },
+      {
+        "config": "depth4_low_lr",
+        "mean_pr_auc": 0.26343,
+        "mean_roc_auc": 0.88084,
+        "mean_brier_score": 0.024253,
+        "runs": 3
+      },
+      {
+        "config": "depth4_high_min_child",
+        "mean_pr_auc": 0.262986,
+        "mean_roc_auc": 0.880827,
+        "mean_brier_score": 0.024254,
+        "runs": 3
+      }
+    ],
+    "stroke": [
+      {
+        "config": "depth3_smooth",
+        "mean_pr_auc": 0.394142,
+        "mean_roc_auc": 0.87705,
+        "mean_brier_score": 0.044191,
+        "runs": 3
+      },
+      {
+        "config": "depth4_low_lr",
+        "mean_pr_auc": 0.393642,
+        "mean_roc_auc": 0.876919,
+        "mean_brier_score": 0.044213,
+        "runs": 3
+      },
+      {
+        "config": "depth4_fast",
+        "mean_pr_auc": 0.392298,
+        "mean_roc_auc": 0.876761,
+        "mean_brier_score": 0.04422,
+        "runs": 3
+      }
+    ]
+  }
+}

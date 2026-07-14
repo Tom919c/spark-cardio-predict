@@ -11,7 +11,7 @@ def index():
         message="心脑血管疾病风险预测与分析平台后端骨架已启动。",
         data={
             "system": "cardio-cerebrovascular-risk-platform",
-            "stage": "part-1-foundation",
+            "stage": "phase-2",
         },
     )
 

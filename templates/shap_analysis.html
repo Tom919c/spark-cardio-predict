@@ -4,10 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CardioSpark AI 风险原因分析</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script src="{{ url_for('static', filename='tailwind/tailwind.js') }}"></script>
+  <script src="{{ url_for('static', filename='echarts/echarts.min.js') }}"></script>
   <style>
     @import url("{{ url_for('static', filename='css/page-switcher.css') }}");
+    @import url("{{ url_for('static', filename='css/phase2.css') }}");
     :root {
       --bg-1: #f4f8ff;
       --bg-2: #edf5ff;
@@ -206,6 +207,30 @@
       font-size: 1.8rem;
       color: #13274b;
     }
+    .assessment-context {
+      display: grid;
+      grid-template-columns: minmax(0, 1.5fr) repeat(2, minmax(0, 0.75fr));
+      gap: 16px;
+      align-items: center;
+      margin-top: 16px;
+      padding: 14px 18px;
+      border-radius: 16px;
+    }
+    .context-item {
+      min-width: 0;
+      padding-right: 16px;
+      border-right: 1px solid rgba(113, 155, 219, 0.14);
+    }
+    .context-item:last-child { padding-right: 0; border-right: 0; }
+    .context-item strong {
+      display: block;
+      margin-top: 4px;
+      overflow: hidden;
+      color: #13274b;
+      font-size: 1rem;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
     .meta {
       color: #7f97b7;
       font-size: 11px;
@@ -281,7 +306,9 @@
       height: 320px;
     }
     @media (max-width: 960px) {
-      .summary-strip, .layout, .model-grid { grid-template-columns: 1fr; }
+      .summary-strip, .layout, .model-grid, .assessment-context { grid-template-columns: 1fr; }
+      .context-item { padding: 0 0 10px; border-right: 0; border-bottom: 1px solid rgba(113, 155, 219, 0.14); }
+      .context-item:last-child { padding-bottom: 0; border-bottom: 0; }
     }
     @media (max-width: 720px) {
       .shell { padding: 12px 12px 24px; }
@@ -324,22 +351,19 @@
     </section>
 
     <div id="shapContent" class="hidden">
-      <section class="summary-strip">
-        <article class="summary-card glass" style="animation-delay:0.06s;">
-          <div class="meta">综合结果 / Assessment Result</div>
+      <section class="assessment-context glass" style="animation-delay:0.06s;">
+        <div class="context-item">
+          <div class="meta">本次评估上下文</div>
           <strong id="summaryCategory">--</strong>
-          <p class="subtitle" id="summaryRisk">--</p>
-        </article>
-        <article class="summary-card glass" style="animation-delay:0.12s;">
-          <div class="meta">心脏风险 / Heart Risk</div>
+        </div>
+        <div class="context-item">
+          <div class="meta">心脏模型风险</div>
           <strong id="summaryHeart">--</strong>
-          <p class="subtitle">本次评估中心脏相关风险的参考概率。</p>
-        </article>
-        <article class="summary-card glass" style="animation-delay:0.18s;">
-          <div class="meta">卒中风险 / Stroke Risk</div>
+        </div>
+        <div class="context-item">
+          <div class="meta">卒中模型风险</div>
           <strong id="summaryStroke">--</strong>
-          <p class="subtitle">本次评估中卒中相关风险的参考概率。</p>
-        </article>
+        </div>
       </section>
 
       <section class="layout">
@@ -396,6 +420,7 @@
       当前还没有最近一次评估的原因说明结果。请先回到评估页完成一次预测，
       系统才会把最新的分析结果同步到这里。
     </div>
+    <div id="phase2ShapState" class="phase2-empty glass" style="margin-top:16px;display:none;"></div>
   </div>
 
   <script>
@@ -403,7 +428,8 @@
       0: "当前未见明显高风险",
       1: "心脏风险偏高",
       2: "卒中风险偏高",
-      3: "心脑血管双高风险"
+      3: "心脑血管双高风险",
+      4: "多因素风险提示"
     };
 
     function safePercent(value) {
@@ -534,7 +560,6 @@
       document.getElementById("shapContent").classList.remove("hidden");
 
       document.getElementById("summaryCategory").textContent = categoryLabelMap[data.final_category ?? 0] || "风险评估完成";
-      document.getElementById("summaryRisk").textContent = data.risk_summary || "--";
       document.getElementById("summaryHeart").textContent = safePercent(data.heart_probability_percent);
       document.getElementById("summaryStroke").textContent = safePercent(data.stroke_probability_percent);
 
@@ -574,5 +599,6 @@
       if (negativeChart) negativeChart.resize();
     });
   </script>
+  <script src="{{ url_for('static', filename='js/phase2.js') }}" defer></script>
 </body>
 </html>

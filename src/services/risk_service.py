@@ -10,6 +10,7 @@ from src.models.intervention_plan import InterventionPlan
 from src.models.risk_result import RiskResult
 from src.services.data_service import DataService
 from src.services.intervention_service import InterventionService
+from src.services.knowledge_service import KnowledgeService
 from src.utils.risk_rules import build_indicator_insights, build_risk_interpretation
 from src.utils.training_recorder import TrainingResultRecorder
 from src.utils.validator import PredictionInputValidator
@@ -24,7 +25,13 @@ class RiskService:
         self.training_recorder = TrainingResultRecorder(
             config.get("TRAINING_RESULTS_PATH", "docs/training_results.md")
         )
-        self.intervention_service = InterventionService()
+        self.knowledge_service = KnowledgeService(
+            config.get(
+                "KNOWLEDGE_BASE_PATH",
+                "resources/knowledge/intervention_rules.json",
+            )
+        )
+        self.intervention_service = InterventionService(self.knowledge_service)
         self.model_explainer = ModelExplainer()
         self.feature_columns = config.get("CARDIO_FEATURE_COLUMNS", [])
         self.thresholds = config.get("RISK_LEVEL_THRESHOLDS", (0.15, 0.35, 0.60, 0.80))
@@ -37,7 +44,7 @@ class RiskService:
 
     def get_platform_summary(self):
         return {
-            "stage": "phase_1",
+            "stage": "phase_2",
             "data_mode": self.config.get("DATA_MODE", "local"),
             "risk_models": ["heart", "stroke"],
             "required_features": self.feature_columns,
@@ -105,12 +112,16 @@ class RiskService:
         final_category = self._build_final_category(
             prediction["heart_predicted_probability"],
             prediction["stroke_predicted_probability"],
+            normalised_sample,
+            prediction["heart_predicted_label"],
+            prediction["stroke_predicted_label"],
         )
         risk_level = self._risk_level(
             max(
                 prediction["heart_predicted_probability"],
                 prediction["stroke_predicted_probability"],
-            )
+            ),
+            final_category,
         )
         interpretation = build_risk_interpretation(
             sample=normalised_sample,
@@ -119,11 +130,12 @@ class RiskService:
             final_category=final_category,
             risk_level=risk_level,
         )
+        intervention_data = self.intervention_service.build_plan(
+            normalised_sample, risk_level
+        )
         intervention_plan = InterventionPlan(
             risk_level=risk_level,
-            suggestions=self.intervention_service.build_plan(
-                normalised_sample, risk_level
-            )["suggestions"],
+            suggestions=intervention_data["suggestions"],
         )
 
         risk_result = RiskResult(
@@ -151,25 +163,117 @@ class RiskService:
             heart_explanation=heart_explanation,
             stroke_explanation=stroke_explanation,
         )
+        result["intervention_knowledge_version"] = intervention_data.get(
+            "knowledge_version", "fallback"
+        )
+        result["intervention_sources"] = intervention_data.get("sources", [])
         return result
 
-    def _build_final_category(self, heart_probability, stroke_probability):
+    def predict_what_if(self, baseline, scenario):
+        """比较同一模型版本下的基线与情景结果，不表达因果结论。"""
+        baseline_result = self.predict_risk(baseline)
+        scenario_result = self.predict_risk(scenario)
+        return {
+            "baseline": self._what_if_snapshot(baseline_result),
+            "scenario": self._what_if_snapshot(scenario_result),
+            "delta": {
+                "heart_probability": round(
+                    scenario_result["heart_predicted_probability"]
+                    - baseline_result["heart_predicted_probability"],
+                    6,
+                ),
+                "stroke_probability": round(
+                    scenario_result["stroke_predicted_probability"]
+                    - baseline_result["stroke_predicted_probability"],
+                    6,
+                ),
+                "risk_level_changed": baseline_result["risk_level"]
+                != scenario_result["risk_level"],
+            },
+            "interpretation": "这是模型情景模拟结果，不代表真实干预的因果效果。",
+            "model_version": self._model_version(),
+        }
+
+    @staticmethod
+    def _what_if_snapshot(result):
+        return {
+            "heart_probability": result["heart_predicted_probability"],
+            "stroke_probability": result["stroke_predicted_probability"],
+            "heart_probability_percent": result["heart_probability_percent"],
+            "stroke_probability_percent": result["stroke_probability_percent"],
+            "risk_level": result["risk_level"],
+            "final_category": result["final_category"],
+        }
+
+    def _model_version(self):
+        manifest_path = self.config.get("MODEL_MANIFEST_PATH")
+        try:
+            import json
+            from pathlib import Path
+
+            manifest = json.loads(Path(manifest_path).read_text(encoding="utf-8"))
+            return manifest.get("updated_at", "unknown")
+        except (OSError, TypeError, ValueError):
+            return "unknown"
+
+    def _build_final_category(
+        self,
+        heart_probability,
+        stroke_probability,
+        sample=None,
+        heart_label=None,
+        stroke_label=None,
+    ):
         """根据双模型概率确定最终类别：0=健康, 1=心脏, 2=卒中, 3=双重。"""
-        heart_positive = heart_probability is not None and heart_probability >= self.thresholds[1]
+        # 两个疾病模型的患病率不同，各自训练时已经保存了最优决策阈值。
+        # 不能再用统一的 V 级显示阈值替代它，否则低基线的卒中模型会把
+        # 已判阳性的个体错误显示为“健康”。
+        heart_positive = (
+            bool(heart_label)
+            if heart_label is not None
+            else heart_probability is not None and heart_probability >= self.thresholds[0]
+        )
         stroke_positive = (
-            stroke_probability is not None and stroke_probability >= self.thresholds[1]
+            bool(stroke_label)
+            if stroke_label is not None
+            else stroke_probability is not None and stroke_probability >= self.thresholds[0]
         )
         if not heart_positive and not stroke_positive:
-            return 0
+            return 4 if self._has_multifactor_alert(sample) else 0
         if heart_positive and not stroke_positive:
             return 1
         if not heart_positive and stroke_positive:
             return 2
         return 3
 
-    def _risk_level(self, probability):
+    @staticmethod
+    def _has_multifactor_alert(sample):
+        """Identify a transparent clinical safety prompt without changing probabilities.
+
+        This is not a diagnosis or a replacement for the calibrated model.  It only
+        prevents a combination such as obesity, severe dyslipidaemia, diabetes,
+        hypertension and current smoking from being phrased as "healthy" when the
+        model score happens to remain below its probability threshold.
+        """
+        if not isinstance(sample, dict):
+            return False
+        factor_count = sum(
+            (
+                sample.get("hypertension", 0) == 1,
+                sample.get("diabetes", 0) == 1,
+                sample.get("smoker", 0) >= 2,
+                sample.get("cholesterol", 1) >= 3,
+                sample.get("bmi", 0) >= 30,
+                sample.get("exercise", 1) == 0,
+            )
+        )
+        return factor_count >= 4
+
+    def _risk_level(self, probability, final_category=0):
         """综合等级取两项独立事件概率的较高值，对应项目方案的医学 V 级规则。"""
         if probability < self.thresholds[0]:
+            if final_category != 0:
+                return {"code": 2, "name": "II级：关注", "color": "#ca8a04"}
             return {"code": 1, "name": "I级：健康", "color": "#16a34a"}
         if probability < self.thresholds[1]:
             return {"code": 2, "name": "II级：关注", "color": "#ca8a04"}

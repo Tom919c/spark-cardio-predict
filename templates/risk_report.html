@@ -6,9 +6,10 @@
  <title>CardioSpark 个人心脑血管风险评估</title>
  
  <!-- ===== CDN 引入 ===== -->
- <script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/page-switcher.css') }}">
+<script src="{{ url_for('static', filename='tailwind/tailwind.js') }}"></script>
+<script src="{{ url_for('static', filename='echarts/echarts.min.js') }}"></script>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/page-switcher.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/phase2.css') }}">
  
  <style>
  /* ===== 全局基础 ===== */
@@ -139,10 +140,11 @@
  @keyframes fadeUp{0%{opacity:0;transform:translateY(24px)}100%{opacity:1;transform:translateY(0)}}
  
  /* ===== 风险等级卡片 ===== */
- .risk-level-card{
-   border-radius:14px;padding:20px;text-align:center;color:#fff;
-   position:relative;overflow:hidden;height:100%;display:flex;flex-direction:column;justify-content:center;
- }
+.risk-level-card{
+  border-radius:14px;padding:20px;text-align:center;color:#334155;
+  background:#E2E8F0;min-height:144px;
+  position:relative;overflow:hidden;height:100%;display:flex;flex-direction:column;justify-content:center;
+}
  .risk-level-card.level-1{background:linear-gradient(135deg,#16A34A,#22C55E)}
  .risk-level-card.level-2{background:linear-gradient(135deg,#CA8A04,#EAB308);color:#422006}
  .risk-level-card.level-3{background:linear-gradient(135deg,#EA580C,#F97316)}
@@ -167,6 +169,7 @@
    padding:14px 0;border-bottom:1px solid #F1F5F9;
  }
  .suggestion-item:last-child{border-bottom:none}
+ .suggestion-list-heading{padding:2px 0 8px;color:#0F172A;font-size:15px;font-weight:700}
  .suggestion-item .icon{
    width:28px;height:28px;border-radius:8px;
    display:flex;align-items:center;justify-content:center;
@@ -182,9 +185,20 @@
  .suggestion-item .content .desc{font-size:13px;color:#64748B;line-height:1.6}
  .suggestion-item .content .highlight{display:inline-block;background:#FEE2E2;color:#DC2626;padding:1px 6px;border-radius:4px;font-size:12px;font-weight:600}
  
- /* ===== 仪表盘容器 ===== */
- .gauge-wrap{width:100%;max-width:320px;margin:0 auto}
- @media(min-width:640px){.gauge-wrap{max-width:360px}}
+ /* ===== 风险仪表盘 ===== */
+ .assessment-card{padding:20px 18px 24px;text-align:center}
+ .assessment-eyebrow{display:flex;align-items:center;justify-content:center;gap:8px;color:#64748B;font-size:13px;font-weight:600}
+ .assessment-eyebrow::before{content:'';width:8px;height:8px;border-radius:50%;background:#2563EB;box-shadow:0 0 0 4px #DBEAFE}
+ .gauge-wrap{width:100%;max-width:500px;margin:0 auto;position:relative}
+ #gaugeChart{height:340px!important}
+ .gauge-reading,.gauge-scale{display:none}
+ .risk-probabilities{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:12px 0 16px}
+ .risk-probability{min-width:0;padding:14px 16px;border:1px solid #E2E8F0;border-radius:12px;background:#FFFFFF;text-align:left;box-shadow:0 1px 2px rgba(15,23,42,0.04)}
+ .risk-probability__label{display:flex;align-items:center;gap:7px;color:#64748B;font-size:12px;font-weight:600}
+ .risk-probability__dot{width:8px;height:8px;border-radius:50%;background:#EF4444;flex:0 0 auto}
+ .risk-probability--stroke .risk-probability__dot{background:#8B5CF6}
+ .risk-probability strong{display:block;margin-top:8px;color:#0F172A;font-size:24px;line-height:1;font-weight:750}
+ @media(min-width:640px){.gauge-wrap{max-width:520px}.assessment-card{padding:24px 24px 28px}}
  
  /* ===== 加载提示 ===== */
  .loading-hint{text-align:center;padding:16px 0 4px}
@@ -197,7 +211,10 @@
  .validation-error.show{display:block}
  
  /* ===== 结果网格布局 ===== */
- .result-grid{display:grid;grid-template-columns:1fr;gap:16px}.result-grid>div{display:flex}
+ .result-grid{display:grid;grid-template-columns:1fr;gap:16px;align-items:stretch}
+ .result-grid>div{display:flex;min-width:0}
+ .result-grid .risk-level-card,
+ .result-grid .guide-card{width:100%;min-width:0}
  @media(min-width:768px){.result-grid{grid-template-columns:1fr 1fr;gap:20px}}
  .result-grid .full-width{grid-column:1/-1}
  
@@ -279,11 +296,14 @@
      border-radius: 12px;
    }
    .gauge-wrap {
-     max-width: 260px;
+     max-width: 310px;
    }
    #gaugeChart {
-     height: 200px !important;
+     height: 270px !important;
    }
+   .risk-probabilities{gap:8px;margin-bottom:12px}
+   .risk-probability{padding:12px 10px}
+   .risk-probability strong{font-size:21px}
    .risk-level-card {
      padding: 16px 12px;
      border-radius: 12px;
@@ -348,10 +368,10 @@
      gap: 4px;
    }
    .gauge-wrap {
-     max-width: 220px;
+     max-width: 270px;
    }
    #gaugeChart {
-     height: 170px !important;
+     height: 240px !important;
    }
    .hero h1 {
      font-size: 18px;
@@ -404,7 +424,53 @@
    transition: background 0.2s;
  }
  .modal-box .modal-btn:hover { background: #2563EB; }
- 
+
+ /* ===== What-if 多因素情景模拟 ===== */
+ .what-if-intro{font-size:13px;color:#64748B;line-height:1.6;margin:-4px 0 16px}
+ .what-if-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 16px}
+ .what-if-control{border:1px solid #E2E8F0;border-radius:12px;padding:14px;background:#F8FAFC}
+ .what-if-control--wide{grid-column:1/-1}
+ .what-if-label{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:14px;font-weight:600;color:#334155;margin-bottom:10px}
+ .what-if-value{min-width:58px;padding:3px 8px;border-radius:6px;background:#DBEAFE;color:#1D4ED8;text-align:center;font-variant-numeric:tabular-nums}
+ .what-if-range{width:100%;height:6px;accent-color:#2563EB;cursor:pointer}
+ .what-if-range-scale{display:flex;justify-content:space-between;color:#94A3B8;font-size:11px;margin-top:5px}
+ .what-if-choice-group{display:flex;gap:8px;flex-wrap:wrap}
+ .what-if-choice{position:relative;flex:1;min-width:72px}
+ .what-if-choice input{position:absolute;opacity:0;pointer-events:none}
+ .what-if-choice span{display:flex;align-items:center;justify-content:center;min-height:36px;padding:7px 10px;border:1.5px solid #CBD5E1;border-radius:8px;background:#fff;color:#475569;font-size:13px;cursor:pointer;transition:all .2s;white-space:nowrap}
+ .what-if-choice span:hover{border-color:#93C5FD;background:#EFF6FF}
+ .what-if-choice input:checked + span{border-color:#2563EB;background:#EFF6FF;color:#1D4ED8;font-weight:600;box-shadow:0 0 0 2px rgba(37,99,235,.08)}
+ .what-if-switch-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+ .what-if-switch-row{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:36px;padding:7px 10px;border:1px solid #E2E8F0;border-radius:8px;background:#fff;color:#475569;font-size:13px;cursor:pointer}
+ .what-if-switch{position:absolute;opacity:0;pointer-events:none}
+ .what-if-switch-track{position:relative;width:38px;height:22px;flex:0 0 auto;border-radius:999px;background:#CBD5E1;transition:background .2s}
+ .what-if-switch-track::after{content:'';position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(15,23,42,.25);transition:transform .2s}
+ .what-if-switch:checked + .what-if-switch-track{background:#2563EB}
+ .what-if-switch:checked + .what-if-switch-track::after{transform:translateX(16px)}
+ .what-if-fixed{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+ .what-if-fixed-item{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border-radius:8px;background:#fff;border:1px dashed #CBD5E1;color:#64748B;font-size:13px}
+ .what-if-fixed-item strong{color:#334155;font-size:14px}
+ .what-if-actions{display:flex;gap:10px;margin-top:16px}
+ .what-if-secondary{border:1px solid #CBD5E1;border-radius:10px;padding:11px 16px;background:#fff;color:#475569;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap}
+ .what-if-secondary:hover{border-color:#93C5FD;background:#F8FAFC}
+ .what-if-result{margin-top:14px;padding:14px;border:1px solid #E2E8F0;border-radius:12px;background:#F8FAFC;color:#475569;font-size:13px;line-height:1.6}
+ .what-if-result.is-error{border-color:#FECACA;background:#FEF2F2;color:#B91C1C}
+ .what-if-result.is-loading{color:#64748B}
+ .what-if-metric-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:10px}
+ .what-if-metric{padding:10px;border:1px solid #E2E8F0;border-radius:9px;background:#fff}
+ .what-if-metric-title{font-size:12px;color:#64748B;margin-bottom:4px}
+ .what-if-metric-value{font-size:16px;font-weight:700;color:#1E293B;font-variant-numeric:tabular-nums}
+ .what-if-metric-delta{font-size:12px;font-weight:600;margin-top:3px}
+ .what-if-metric-delta.is-up{color:#DC2626}.what-if-metric-delta.is-down{color:#059669}.what-if-metric-delta.is-flat{color:#64748B}
+ .what-if-level-change{margin-top:10px;padding-top:10px;border-top:1px solid #E2E8F0;color:#475569}
+ @media(max-width:640px){
+   .what-if-grid{grid-template-columns:1fr}
+   .what-if-control--wide{grid-column:auto}
+   .what-if-actions{flex-direction:column-reverse}
+   .what-if-secondary,.what-if-actions .btn-submit{width:100%!important;justify-content:center}
+ }
+ @media(max-width:420px){.what-if-switch-list{grid-template-columns:1fr}.what-if-choice span{font-size:12px;padding-left:7px;padding-right:7px}}
+
  </style>
  
  <!-- Tailwind 自定义 -->
@@ -612,26 +678,35 @@
       模块3：评估结果区
       ============================================================ -->
  <div class="result-area" id="resultArea">
+   <div class="phase2-banner" id="phase2RiskBanner" style="display:none;margin-bottom:16px;"></div>
  
    <!-- 3-1：结果头部 + 仪表盘 -->
-   <div class="card" style="text-align:center;">
-     <div style="font-size:13px;color:#64748B;margin-bottom:4px;">评估结果</div>
+   <div class="card assessment-card">
+     <div class="assessment-eyebrow">本次评估结果</div>
      <div class="gauge-wrap">
-     <div id="gaugeChart" style="width:100%;height:240px;"></div>
+       <div id="gaugeChart" aria-label="综合风险概率仪表盘"></div>
+       <div class="gauge-reading" aria-live="polite">
+         <strong id="gaugeValue">--</strong>
+         <span>综合风险概率</span>
+       </div>
+       <div class="gauge-scale" aria-label="风险区间">
+         <div class="gauge-scale__item gauge-scale__item--low"><b>0 - 40%</b>风险较低</div>
+         <div class="gauge-scale__item gauge-scale__item--mid"><b>40 - 70%</b>需要关注</div>
+         <div class="gauge-scale__item gauge-scale__item--high"><b>70 - 100%</b>风险较高</div>
+       </div>
     </div>
   </div>
 
   <!-- 3-2：风险等级 + 临床指导 -->
-  <div class="dual-prob" style="display:flex;gap:12px;flex-wrap:wrap;margin-top:12px;">
-    <div style="flex:1;min-width:120px;text-align:center;padding:12px;border-radius:10px;background:#F8FAFC;border:1px solid #E2E8F0;border-left:3px solid #EF4444;">
-      <div style="font-size:12px;color:#64748B;margin-bottom:2px;">心脏事件风险</div>
-      <div style="font-size:20px;font-weight:700;color:#1E293B;" id="heartProbVal">--</div>
+  <div class="risk-probabilities">
+    <div class="risk-probability">
+      <div class="risk-probability__label"><span class="risk-probability__dot"></span>心脏事件风险</div>
+      <strong id="heartProbVal">--</strong>
     </div>
-    <div style="flex:1;min-width:120px;text-align:center;padding:12px;border-radius:10px;background:#F8FAFC;border:1px solid #E2E8F0;border-left:3px solid #8B5CF6;">
-      <div style="font-size:12px;color:#64748B;margin-bottom:2px;">卒中风险</div>
-      <div style="font-size:20px;font-weight:700;color:#1E293B;" id="strokeProbVal">--</div>
-    </div>
-  </div>
+   <div class="risk-probability risk-probability--stroke">
+     <div class="risk-probability__label"><span class="risk-probability__dot"></span>卒中风险</div>
+     <strong id="strokeProbVal">--</strong>
+   </div>
   </div>
 
   <div class="result-grid">
@@ -687,6 +762,62 @@
     <div id="suggestionList">
       <div style="text-align:center;padding:16px;color:#94A3B8;font-size:14px;">完成评估后将为您生成个性化建议</div>
     </div>
+  </div>
+
+  <div class="card" id="whatIfCard" style="display:none;">
+    <div class="form-section-title" style="border-bottom-color:#D1FAE5;">
+      <span class="icon life" style="background:#D1FAE5;color:#059669;">↔</span>
+      健康因素情景模拟
+    </div>
+    <div class="what-if-intro">调整健康因素后，比较模型对同一人的基线风险与情景风险。年龄和性别保持本次评估的基线值。</div>
+    <div class="what-if-grid">
+      <div class="what-if-control what-if-control--wide">
+        <label class="what-if-label" for="whatIfBmi">
+          <span>情景 BMI</span><output class="what-if-value" id="whatIfBmiValue" for="whatIfBmi">--</output>
+        </label>
+        <input class="what-if-range" id="whatIfBmi" type="range" min="10.3" max="79.8" step="0.1" value="22">
+        <div class="what-if-range-scale"><span>10.3</span><span>79.8</span></div>
+      </div>
+      <div class="what-if-control">
+        <div class="what-if-label"><span>胆固醇水平</span></div>
+        <div class="what-if-choice-group" role="radiogroup" aria-label="情景胆固醇水平">
+          <label class="what-if-choice"><input type="radio" name="whatIfCholesterol" value="1"><span>正常</span></label>
+          <label class="what-if-choice"><input type="radio" name="whatIfCholesterol" value="2"><span>偏高</span></label>
+          <label class="what-if-choice"><input type="radio" name="whatIfCholesterol" value="3"><span>较高</span></label>
+        </div>
+      </div>
+      <div class="what-if-control">
+        <div class="what-if-label"><span>吸烟状态</span></div>
+        <div class="what-if-choice-group" role="radiogroup" aria-label="情景吸烟状态">
+          <label class="what-if-choice"><input type="radio" name="whatIfSmoker" value="0"><span>从不</span></label>
+          <label class="what-if-choice"><input type="radio" name="whatIfSmoker" value="1"><span>既往</span></label>
+          <label class="what-if-choice"><input type="radio" name="whatIfSmoker" value="2"><span>当前</span></label>
+        </div>
+      </div>
+      <div class="what-if-control">
+        <div class="what-if-label"><span>健康习惯</span></div>
+        <div class="what-if-switch-list">
+          <label class="what-if-switch-row" for="whatIfDiabetes"><span>糖尿病</span><input class="what-if-switch" id="whatIfDiabetes" type="checkbox"><span class="what-if-switch-track" aria-hidden="true"></span></label>
+          <label class="what-if-switch-row" for="whatIfHypertension"><span>高血压</span><input class="what-if-switch" id="whatIfHypertension" type="checkbox"><span class="what-if-switch-track" aria-hidden="true"></span></label>
+          <label class="what-if-switch-row" for="whatIfAlcohol"><span>饮酒</span><input class="what-if-switch" id="whatIfAlcohol" type="checkbox"><span class="what-if-switch-track" aria-hidden="true"></span></label>
+          <label class="what-if-switch-row" for="whatIfExercise"><span>规律运动</span><input class="what-if-switch" id="whatIfExercise" type="checkbox"><span class="what-if-switch-track" aria-hidden="true"></span></label>
+        </div>
+      </div>
+      <div class="what-if-control">
+        <div class="what-if-label"><span>固定基线</span></div>
+        <div class="what-if-fixed">
+          <div class="what-if-fixed-item"><span>年龄</span><strong><span id="whatIfAge">--</span> 岁</strong></div>
+          <div class="what-if-fixed-item"><span>性别</span><strong id="whatIfGender">--</strong></div>
+        </div>
+      </div>
+    </div>
+    <div class="what-if-actions">
+      <button class="what-if-secondary" id="whatIfReset" type="button">恢复基线</button>
+      <button class="btn-submit" id="whatIfRun" type="button" style="flex:1;padding:11px 16px;">
+        计算情景结果
+      </button>
+    </div>
+    <div id="whatIfResult" class="what-if-result" aria-live="polite">调整因素后计算模型结果变化。</div>
   </div>
 
   <!-- 3-4：重新评估 -->
@@ -798,11 +929,27 @@
  function closeErrorModal() {
    document.getElementById('errorModalOverlay').classList.add('hidden');
  }
+
+ async function parseApiResponse(response) {
+   const body = await response.text();
+   try {
+     return JSON.parse(body);
+   } catch (error) {
+     const trimmed = body.trimStart().toLowerCase();
+     if (trimmed.startsWith('<!doctype') || trimmed.startsWith('<html')) {
+       throw new Error('服务返回了网页（HTTP ' + response.status + '），请重启当前 Flask 服务后重试。');
+     }
+     throw new Error('服务返回了无法识别的响应（HTTP ' + response.status + '）。');
+   }
+ }
  
  /* ===========================================================================
   *  模块C：提交与评估
   * =========================================================================== */
  let gaugeInstance = null;
+ let gaugeAnimationTimer = null;
+ let gaugeResizeBound = false;
+ let currentRiskInput = null;
  
  document.getElementById('assessmentForm').addEventListener('submit', async function(e) {
    e.preventDefault();
@@ -854,9 +1001,10 @@
        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
       body: JSON.stringify(payload)
     });
-    const respData = await resp.json();
+     const respData = await parseApiResponse(resp);
     if (!resp.ok || !respData.success) throw new Error(respData.message || ('HTTP ' + resp.status));
     const prediction = respData.data;
+    currentRiskInput = payload;
     sessionStorage.setItem('cardiospark_latest_result', JSON.stringify(prediction));
     renderResults(prediction);
     document.getElementById('resultArea').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -916,16 +1064,163 @@ function renderResults(prediction) {
   const list = document.getElementById('suggestionList');
   const suggestions = (prediction.intervention_plan && prediction.intervention_plan.suggestions) || [];
   if (suggestions.length > 0) {
-    list.innerHTML = suggestions.map(function(desc) {
+    list.innerHTML = '<div class="suggestion-list-heading">健康管理建议</div>' + suggestions.map(function(desc) {
       return '<div class="suggestion-item">' +
         '<div class="icon goal"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>' +
-        '<div class="content"><div class="title">健康管理建议</div><div class="desc">' + desc + '</div></div>' +
+        '<div class="content"><div class="desc">' + desc + '</div></div>' +
       '</div>';
     }).join('');
   }
 
   renderGauge(maxProb * 100, level.color);
+  const whatIfCard = document.getElementById('whatIfCard');
+  if (whatIfCard && currentRiskInput) {
+    whatIfCard.style.display = 'block';
+    setWhatIfControls(currentRiskInput);
+  }
 }
+
+const WHAT_IF_FEATURE_LABELS = {
+  bmi: 'BMI', cholesterol: '胆固醇', diabetes: '糖尿病',
+  hypertension: '高血压', smoker: '吸烟', alcohol: '饮酒', exercise: '规律运动'
+};
+
+function setWhatIfRadio(name, value) {
+  const radio = document.querySelector('input[name="' + name + '"][value="' + Number(value) + '"]');
+  if (radio) radio.checked = true;
+}
+
+function updateWhatIfBmiValue() {
+  const range = document.getElementById('whatIfBmi');
+  const output = document.getElementById('whatIfBmiValue');
+  if (range && output) output.textContent = Number(range.value).toFixed(1);
+}
+
+function setWhatIfControls(input) {
+  if (!input) return;
+  const bmi = document.getElementById('whatIfBmi');
+  if (bmi) bmi.value = Number(input.bmi).toFixed(1);
+  updateWhatIfBmiValue();
+  setWhatIfRadio('whatIfCholesterol', input.cholesterol);
+  setWhatIfRadio('whatIfSmoker', input.smoker);
+  document.getElementById('whatIfDiabetes').checked = Number(input.diabetes) === 1;
+  document.getElementById('whatIfHypertension').checked = Number(input.hypertension) === 1;
+  document.getElementById('whatIfAlcohol').checked = Number(input.alcohol) === 1;
+  document.getElementById('whatIfExercise').checked = Number(input.exercise) === 1;
+  document.getElementById('whatIfAge').textContent = Number(input.age);
+  document.getElementById('whatIfGender').textContent = Number(input.gender) === 1 ? '男' : '女';
+}
+
+function getWhatIfRadioValue(name, fallback) {
+  const selected = document.querySelector('input[name="' + name + '"]:checked');
+  return selected ? Number(selected.value) : Number(fallback);
+}
+
+function getWhatIfScenario() {
+  const scenario = Object.assign({}, currentRiskInput);
+  scenario.bmi = Number(document.getElementById('whatIfBmi').value);
+  scenario.cholesterol = getWhatIfRadioValue('whatIfCholesterol', currentRiskInput.cholesterol);
+  scenario.smoker = getWhatIfRadioValue('whatIfSmoker', currentRiskInput.smoker);
+  scenario.diabetes = document.getElementById('whatIfDiabetes').checked ? 1 : 0;
+  scenario.hypertension = document.getElementById('whatIfHypertension').checked ? 1 : 0;
+  scenario.alcohol = document.getElementById('whatIfAlcohol').checked ? 1 : 0;
+  scenario.exercise = document.getElementById('whatIfExercise').checked ? 1 : 0;
+  return scenario;
+}
+
+function escapeWhatIfHtml(value) {
+  return String(value == null ? '--' : value)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
+
+function formatWhatIfPercent(value) {
+  return (Number(value || 0) * 100).toFixed(2) + '%';
+}
+
+function formatWhatIfDelta(value) {
+  const number = Number(value || 0) * 100;
+  return (number > 0 ? '+' : '') + number.toFixed(2) + ' 个百分点';
+}
+
+function whatIfDeltaClass(value) {
+  const number = Number(value || 0);
+  return number > 0 ? 'is-up' : (number < 0 ? 'is-down' : 'is-flat');
+}
+
+function renderWhatIfResult(data) {
+  const resultBox = document.getElementById('whatIfResult');
+  const baseline = data.baseline || {};
+  const scenario = data.scenario || {};
+  const delta = data.delta || {};
+  const metrics = [
+    { label: '心脏风险', baseline: baseline.heart_probability, scenario: scenario.heart_probability, delta: delta.heart_probability },
+    { label: '卒中风险', baseline: baseline.stroke_probability, scenario: scenario.stroke_probability, delta: delta.stroke_probability }
+  ];
+  const changedFields = (data.changed_fields || []).map(function(field) {
+    return WHAT_IF_FEATURE_LABELS[field] || field;
+  });
+  resultBox.className = 'what-if-result';
+  resultBox.innerHTML = '<div><strong>情景计算完成</strong>' +
+    (changedFields.length ? ' · 已调整：' + changedFields.join('、') : '') + '</div>' +
+    '<div class="what-if-metric-grid">' + metrics.map(function(metric) {
+      return '<div class="what-if-metric">' +
+        '<div class="what-if-metric-title">' + metric.label + '</div>' +
+        '<div class="what-if-metric-value">' + formatWhatIfPercent(metric.scenario) + '</div>' +
+        '<div>基线 ' + formatWhatIfPercent(metric.baseline) + '</div>' +
+        '<div class="what-if-metric-delta ' + whatIfDeltaClass(metric.delta) + '">' + formatWhatIfDelta(metric.delta) + '</div>' +
+      '</div>';
+    }).join('') + '</div>' +
+    '<div class="what-if-level-change">综合风险等级：' +
+      escapeWhatIfHtml(baseline.risk_level && baseline.risk_level.name) + ' → ' +
+      escapeWhatIfHtml(scenario.risk_level && scenario.risk_level.name) +
+      (delta.risk_level_changed ? '（等级发生变化）' : '（等级未变化）') +
+    '</div>' +
+    '<div class="phase2-muted" style="margin-top:8px;">' + escapeWhatIfHtml(data.interpretation || '这是模型情景模拟结果，不代表真实干预的因果效果。') + '</div>';
+}
+
+document.getElementById('whatIfBmi')?.addEventListener('input', updateWhatIfBmiValue);
+
+document.getElementById('whatIfReset')?.addEventListener('click', function() {
+  if (!currentRiskInput) return;
+  setWhatIfControls(currentRiskInput);
+  const resultBox = document.getElementById('whatIfResult');
+  resultBox.className = 'what-if-result';
+  resultBox.textContent = '已恢复本次评估的基线值，调整因素后可重新计算。';
+});
+
+document.getElementById('whatIfRun')?.addEventListener('click', async function() {
+  const resultBox = document.getElementById('whatIfResult');
+  const runButton = this;
+  if (!currentRiskInput) {
+    resultBox.textContent = '请先完成一次风险评估。';
+    return;
+  }
+  const value = Number(document.getElementById('whatIfBmi').value);
+  if (!Number.isFinite(value) || value < 10.3 || value > 79.8) {
+    resultBox.textContent = 'BMI 必须在有效范围内。';
+    return;
+  }
+  const scenario = getWhatIfScenario();
+  try {
+    runButton.disabled = true;
+    resultBox.className = 'what-if-result is-loading';
+    resultBox.textContent = '正在计算情景结果……';
+    const response = await fetch(API_BASE + '/api/risk/what-if', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ baseline: currentRiskInput, scenario: scenario })
+    });
+    const payload = await parseApiResponse(response);
+    if (!response.ok || !payload.success) throw new Error(payload.message || '情景计算失败');
+    renderWhatIfResult(payload.data || {});
+  } catch (error) {
+    resultBox.className = 'what-if-result is-error';
+    resultBox.textContent = '情景计算失败：' + error.message;
+  } finally {
+    runButton.disabled = false;
+  }
+});
 
 function renderShapChart(domId, items, colorStart, colorEnd) {
   const dom = document.getElementById(domId);
@@ -954,68 +1249,78 @@ function renderShapChart(domId, items, colorStart, colorEnd) {
   * =========================================================================== */
  function renderGauge(targetValue, color) {
    const dom = document.getElementById('gaugeChart');
+   targetValue = Math.max(0, Math.min(100, Number(targetValue) || 0));
+   if (gaugeAnimationTimer) clearInterval(gaugeAnimationTimer);
    if (gaugeInstance) gaugeInstance.dispose();
    gaugeInstance = echarts.init(dom, null, { renderer: 'canvas' });
    const colorHex = color || '#3B82F6';
    const option = {
      series: [{
        type: 'gauge',
-       center: ['50%', '60%'],
-       radius: '90%',
-       startAngle: 210,
-       endAngle: -30,
+       center: ['50%', '62%'],
+       radius: '88%',
+       startAngle: 225,
+       endAngle: -45,
        min: 0,
        max: 100,
-       splitNumber: 5,
-       progress: { show: true, width: 10, itemStyle: { color: colorHex } },
+       splitNumber: 10,
+       animationDuration: 700,
+       animationDurationUpdate: 700,
+       progress: { show: false },
        axisLine: {
          lineStyle: {
-           width: 10,
+           width: 26,
+           roundCap: false,
            color: [
-             [0.15, '#22C55E'],
-             [0.35, '#EAB308'],
-             [0.60, '#F97316'],
-             [0.80, '#EA580C'],
-             [1, '#EF4444']
+             [0.18, '#5B91EB'],
+             [0.38, '#55C8F5'],
+             [0.50, '#87EABB'],
+             [0.75, '#FFC66D'],
+             [1, '#FA7C9D']
            ]
          }
        },
        axisTick: { show: false },
        splitLine: { show: false },
-       axisLabel: { show: false },
+       axisLabel: {
+         show: true,
+         distance: -42,
+         color: '#64748B',
+         fontSize: 15,
+         fontWeight: 500,
+         formatter: function(value) { return String(value); }
+       },
        pointer: { show: false },
        anchor: { show: false },
-       title: { show: false },
+       title: {
+         show: true,
+         offsetCenter: [0, '43%'],
+         color: '#64748B',
+         fontSize: 16,
+         fontWeight: 500
+       },
        detail: {
-         offsetCenter: [0, 30],
+         show: true,
+         offsetCenter: [0, '10%'],
          valueAnimation: true,
-         formatter: function(v) { return v.toFixed(1) + '%'; },
-         fontSize: 32,
-         fontWeight: 700,
+         formatter: function(value) { return value.toFixed(1) + '%'; },
          color: '#0F172A',
-         fontFamily: 'Inter, PingFang SC, sans-serif'
-       }
+         fontSize: 42,
+         fontWeight: 750,
+         fontFamily: 'Inter, PingFang SC, Microsoft YaHei, sans-serif'
+       },
+       data: [{ value: targetValue, name: '风险强度参考' }]
      }]
    };
    gaugeInstance.setOption(option);
-   let current = 0;
-   const steps = 40;
-   const increment = targetValue / steps;
-   const interval = setInterval(function() {
-     current += increment;
-     if (current >= targetValue) {
-       current = targetValue;
-       clearInterval(interval);
-     }
-     gaugeInstance.setOption({
-       series: [{ data: [{ value: current }] }]
-     });
-  }, 25);
-  window.addEventListener('resize', function() {
-    if (gaugeInstance) gaugeInstance.resize();
-    if (positiveShap) positiveShap.resize();
-    if (negativeShap) negativeShap.resize();
-  });
+  if (!gaugeResizeBound) {
+    window.addEventListener('resize', function() {
+      if (gaugeInstance) gaugeInstance.resize();
+      if (positiveShap) positiveShap.resize();
+      if (negativeShap) negativeShap.resize();
+    });
+    gaugeResizeBound = true;
+  }
 }
  
  /* ===========================================================================
@@ -1026,6 +1331,7 @@ function renderShapChart(domId, items, colorStart, colorEnd) {
  }
  
  </script>
+ <script src="{{ url_for('static', filename='js/phase2.js') }}" defer></script>
  
  </body>
  </html>

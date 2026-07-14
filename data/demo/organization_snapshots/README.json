@@ -1,0 +1,41 @@
+{
+  "purpose": "机构端连续月份趋势演示数据",
+  "synthetic": true,
+  "rows_per_snapshot": 20000,
+  "periods": [
+    "2026-01",
+    "2026-02",
+    "2026-03",
+    "2026-04",
+    "2026-05",
+    "2026-06"
+  ],
+  "files": [
+    "data/demo/organization_snapshots/chengdu_demo_population_2026-01.csv",
+    "data/demo/organization_snapshots/chengdu_demo_population_2026-02.csv",
+    "data/demo/organization_snapshots/chengdu_demo_population_2026-03.csv",
+    "data/demo/organization_snapshots/chengdu_demo_population_2026-04.csv",
+    "data/demo/organization_snapshots/chengdu_demo_population_2026-05.csv",
+    "data/demo/organization_snapshots/chengdu_demo_population_2026-06.csv"
+  ],
+  "labels_included": false,
+  "same_resident_panel": true,
+  "identity_fields": [
+    "resident_id",
+    "name",
+    "phone"
+  ],
+  "model_features": [
+    "age",
+    "gender",
+    "bmi",
+    "cholesterol",
+    "diabetes",
+    "hypertension",
+    "smoker",
+    "alcohol",
+    "exercise"
+  ],
+  "health_generation_source": "scripts/generate_chengdu_health_data.py and mydocs/成都居民健康数据.md",
+  "trend_interpretation": "不同月份是同一批仿真居民的统计快照，变化用于演示模型评分和干预观察，不代表真实因果效果。"
+}

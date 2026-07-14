@@ -38,3 +38,59 @@
 - Specificity: `0.7714`
 - ROC AUC: `0.8328`
 - Manifest Updated At: `2026-07-13T04:19:13.311069+00:00`
+
+---
+
+## Auto Training Record 2026-07-14 11:35:15
+- Strategy: `xgboost_with_natural_prevalence_training_isotonic_calibration_and_threshold_tuning`
+
+### heart
+- Run ID: ``
+- Model Path: `data/models/xgboost_heart_xgboost_refined_data_candidate_20260714_113155.joblib`
+- Accuracy: `0.9269`
+- F1 Score: `0.3146`
+- F2 Score: `0.4295`
+- PR AUC: `0.2715`
+- Recall: `0.5679`
+- Specificity: `0.9378`
+- ROC AUC: `0.8811`
+
+### stroke
+- Run ID: ``
+- Model Path: `data/models/xgboost_stroke_xgboost_refined_data_candidate_20260714_113200.joblib`
+- Accuracy: `0.8599`
+- F1 Score: `0.3738`
+- F2 Score: `0.5172`
+- PR AUC: `0.3916`
+- Recall: `0.695`
+- Specificity: `0.8705`
+- ROC AUC: `0.8766`
+- Manifest Updated At: `2026-07-14T03:35:15.788824+00:00`
+
+---
+
+## Auto Training Record 2026-07-14 12:04:25
+- Strategy: `xgboost_with_natural_prevalence_training_isotonic_calibration_and_threshold_tuning`
+
+### heart
+- Run ID: ``
+- Model Path: `data/models/xgboost_heart_xgboost_phase2_v2_20260714_120246.joblib`
+- Accuracy: `0.9278`
+- F1 Score: `0.3136`
+- F2 Score: `0.4257`
+- PR AUC: `0.2697`
+- Recall: `0.5587`
+- Specificity: `0.939`
+- ROC AUC: `0.881`
+
+### stroke
+- Run ID: ``
+- Model Path: `data/models/xgboost_stroke_xgboost_phase2_v2_20260714_120254.joblib`
+- Accuracy: `0.8539`
+- F1 Score: `0.3697`
+- F2 Score: `0.5198`
+- PR AUC: `0.3987`
+- Recall: `0.7125`
+- Specificity: `0.8629`
+- ROC AUC: `0.8781`
+- Manifest Updated At: `2026-07-14T04:04:25.589352+00:00`
