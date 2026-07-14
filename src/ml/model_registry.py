@@ -51,7 +51,7 @@ class ModelRegistry:
             "version": 2,
             "updated_at": datetime.now(timezone.utc).isoformat(),
             "feature_columns": self.feature_columns,
-            "strategy": "two_random_forests_with_isotonic_calibration",
+            "strategy": "two_xgboost_models_with_isotonic_calibration",
             "models": {
                 name: self._store_artifact_path(path) for name, path in models.items()
             },

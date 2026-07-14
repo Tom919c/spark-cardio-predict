@@ -1,4 +1,4 @@
-"""双独立随机森林训练：不平衡处理、概率校准和训练耗时估算。"""
+"""双独立 XGBoost 训练：不平衡处理、概率校准和训练耗时估算。"""
 
 from __future__ import annotations
 
@@ -9,17 +9,17 @@ from pathlib import Path
 import joblib
 import numpy as np
 import pandas as pd
-from sklearn.ensemble import RandomForestClassifier
 from sklearn.isotonic import IsotonicRegression
 from sklearn.metrics import precision_recall_curve
 from sklearn.model_selection import train_test_split
+from xgboost import XGBClassifier
 
 from src.ml.calibrated_model import CalibratedRiskModel
 from src.ml.evaluate import ModelEvaluator
 
 
 class CardioModelTrainer:
-    """训练心脏事件与脑卒中两个独立随机森林模型。"""
+    """训练心脏事件与脑卒中两个独立 XGBoost 模型。"""
 
     def __init__(self, config, progress_callback=None):
         self.config = config
@@ -32,6 +32,11 @@ class CardioModelTrainer:
         self.oversample_ratio = config.get("MINORITY_OVERSAMPLE_RATIO", 0.15)
         self.max_multiplier = config.get("MINORITY_MAX_MULTIPLIER", 3.0)
         self.stroke_min_recall = config.get("STROKE_MIN_RECALL", 0.70)
+        self.max_depth = config.get("XGBOOST_MAX_DEPTH", 8)
+        self.learning_rate = config.get("XGBOOST_LEARNING_RATE", 0.05)
+        self.subsample = config.get("XGBOOST_SUBSAMPLE", 0.8)
+        self.colsample_bytree = config.get("XGBOOST_COLSAMPLE_BYTREE", 0.8)
+        self.device = config.get("XGBOOST_DEVICE", "cuda")
         self.progress_callback = progress_callback or print
         self._started_at = time.perf_counter()
 
@@ -40,7 +45,7 @@ class CardioModelTrainer:
         self.progress_callback(f"[训练进度 {elapsed:.1f}s] {message}")
 
     def estimate(self, dataframe, benchmark_trees=20):
-        """用小规模森林估算本次双模型训练耗时，不写入模型文件。"""
+        """用小规模 XGBoost 估算本次双模型训练耗时，不写入模型文件。"""
         started = time.perf_counter()
         sample = dataframe.sample(min(len(dataframe), 30_000), random_state=self.random_state)
         estimates = {}
@@ -48,13 +53,23 @@ class CardioModelTrainer:
             features = sample[self.feature_columns]
             target = sample[target_column].astype(int)
             x_train, _, y_train, _ = train_test_split(
-                features, target, test_size=self.test_size,
-                random_state=self.random_state, stratify=target,
+                features,
+                target,
+                test_size=self.test_size,
+                random_state=self.random_state,
+                stratify=target,
             )
-            benchmark = RandomForestClassifier(
-                n_estimators=benchmark_trees, max_depth=10,
-                min_samples_leaf=5, class_weight="balanced_subsample",
-                random_state=self.random_state, n_jobs=-1,
+            benchmark = XGBClassifier(
+                n_estimators=benchmark_trees,
+                max_depth=self.max_depth,
+                learning_rate=self.learning_rate,
+                subsample=self.subsample,
+                colsample_bytree=self.colsample_bytree,
+                random_state=self.random_state,
+                tree_method="hist",
+                device=self.device,
+                eval_metric="logloss",
+                n_jobs=-1,
             )
             fit_started = time.perf_counter()
             benchmark.fit(x_train, y_train)
@@ -70,6 +85,7 @@ class CardioModelTrainer:
             "per_model_seconds": estimates,
             "message": f"预计双模型训练耗时约 {round(total / 60, 1)} 分钟，实际受 CPU、内存和数据模式影响。",
             "benchmark_seconds": round(time.perf_counter() - started, 1),
+            "device": self.device,
         }
 
     def train(self, dataframe, run_label="phase1"):
@@ -86,11 +102,12 @@ class CardioModelTrainer:
         elapsed = round(time.perf_counter() - total_started, 1)
         self._progress(f"全部模型完成，实际训练耗时 {elapsed:.1f}s。")
         return {
-            "strategy": "balanced_subsample_with_train_only_minority_oversampling_and_isotonic_calibration",
+            "strategy": "xgboost_gpu_with_train_only_minority_oversampling_and_isotonic_calibration",
             "trained_at": datetime.now(timezone.utc).isoformat(),
             "features": self.feature_columns,
             "training_estimate": estimate,
             "training_seconds": elapsed,
+            "device": self.device,
             "targets": results,
         }
 
@@ -100,12 +117,20 @@ class CardioModelTrainer:
         target = dataframe[target_column].astype(int)
         weights = dataframe.get("sample_weight")
         x_train, x_test, y_train, y_test, weight_train, _ = train_test_split(
-            features, target, weights, test_size=self.test_size,
-            random_state=self.random_state, stratify=target,
+            features,
+            target,
+            weights,
+            test_size=self.test_size,
+            random_state=self.random_state,
+            stratify=target,
         )
         x_fit, x_calibrate, y_fit, y_calibrate, weight_fit, weight_calibrate = train_test_split(
-            x_train, y_train, weight_train, test_size=0.2,
-            random_state=self.random_state, stratify=y_train,
+            x_train,
+            y_train,
+            weight_train,
+            test_size=0.2,
+            random_state=self.random_state,
+            stratify=y_train,
         )
 
         # 只增强拟合子集，校准集和测试集保持真实患病率，避免评估虚高。
@@ -117,16 +142,25 @@ class CardioModelTrainer:
             added = 0
 
         self._progress(
-            f"开始 {target_name} 模型（{index}/{total}），拟合样本 {len(x_fit):,}，新增卒中样本 {added:,}。"
+            f"开始{target_name} 模型（{index}/{total}），拟合样本 {len(x_fit):,}，新增卒中样本 {added:,}。"
         )
-        estimator = RandomForestClassifier(
-            n_estimators=self.n_estimators, max_depth=10, min_samples_leaf=5,
-            class_weight="balanced_subsample", random_state=self.random_state, n_jobs=-1,
+        estimator = XGBClassifier(
+            n_estimators=self.n_estimators,
+            max_depth=self.max_depth,
+            learning_rate=self.learning_rate,
+            subsample=self.subsample,
+            colsample_bytree=self.colsample_bytree,
+            random_state=self.random_state,
+            tree_method="hist",
+            device=self.device,
+            eval_metric="logloss",
+            n_jobs=-1,
         )
         estimator.fit(x_fit, y_fit, sample_weight=weight_fit)
         calibrator = IsotonicRegression(out_of_bounds="clip")
         calibrator.fit(
-            estimator.predict_proba(x_calibrate)[:, 1], y_calibrate,
+            estimator.predict_proba(x_calibrate)[:, 1],
+            y_calibrate,
             sample_weight=weight_calibrate,
         )
         calibrated_probabilities = calibrator.predict(estimator.predict_proba(x_calibrate)[:, 1])
@@ -147,8 +181,11 @@ class CardioModelTrainer:
             "model_path": str(model_path),
             "decision_threshold": threshold,
             "training_seconds": elapsed,
+            "device": self.device,
             "metrics": metrics,
-            "feature_importance": dict(zip(self.feature_columns, map(float, model.feature_importances_))),
+            "feature_importance": dict(
+                zip(self.feature_columns, map(float, model.feature_importances_))
+            ),
         }
 
     def _oversample_minority(self, features, target, weights):
@@ -167,11 +204,17 @@ class CardioModelTrainer:
         extra_target = target.iloc[chosen]
         extra_weights = weights.iloc[chosen] if weights is not None else None
         output_features = pd.concat([features, extra_features], ignore_index=True)
-        output_target = pd.concat([target.reset_index(drop=True), extra_target.reset_index(drop=True)], ignore_index=True)
+        output_target = pd.concat(
+            [target.reset_index(drop=True), extra_target.reset_index(drop=True)],
+            ignore_index=True,
+        )
         if weights is None:
             output_weights = None
         else:
-            output_weights = pd.concat([weights.reset_index(drop=True), extra_weights.reset_index(drop=True)], ignore_index=True)
+            output_weights = pd.concat(
+                [weights.reset_index(drop=True), extra_weights.reset_index(drop=True)],
+                ignore_index=True,
+            )
         return output_features, output_target, output_weights, additional
 
     def _select_threshold(self, y_true, probabilities, target_name):

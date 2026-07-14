@@ -31,6 +31,10 @@ class TrainingResultRecorder:
             f"\n## Auto Training Record {timestamp}\n",
             f"- Strategy: `{training_result.get('strategy', '')}`\n",
         ]
+        if training_result.get("selected_rounds"):
+            lines.append(f"- Selected Rounds: `{training_result.get('selected_rounds')}`\n")
+        if training_result.get("best_round_index"):
+            lines.append(f"- Best Round Index: `{training_result.get('best_round_index')}`\n")
 
         if "targets" in training_result:
             for target_name, target_result in training_result["targets"].items():

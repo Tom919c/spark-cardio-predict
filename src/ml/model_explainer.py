@@ -1,3 +1,4 @@
+import copy
 import joblib
 import pandas as pd
 
@@ -45,6 +46,7 @@ class ModelExplainer:
         try:
             explainable_model = getattr(model, "estimator", model)
             if self._is_tree_model(explainable_model):
+                explainable_model = self._prepare_tree_model_for_explanation(explainable_model)
                 explainer = shap.TreeExplainer(explainable_model)
                 shap_values = explainer.shap_values(sample_frame)
             else:
@@ -78,7 +80,25 @@ class ModelExplainer:
 
     def _is_tree_model(self, model):
         model_name = model.__class__.__name__.lower()
-        return "forest" in model_name or "tree" in model_name or "boost" in model_name
+        return any(
+            token in model_name for token in ("forest", "tree", "boost", "xgb")
+        )
+
+    def _prepare_tree_model_for_explanation(self, model):
+        model_name = model.__class__.__name__.lower()
+        if "xgb" not in model_name:
+            return model
+
+        cpu_model = copy.deepcopy(model)
+        if hasattr(cpu_model, "set_params"):
+            try:
+                cpu_model.set_params(device="cpu")
+            except ValueError:
+                pass
+        if hasattr(cpu_model, "get_booster"):
+            booster = cpu_model.get_booster()
+            booster.set_param({"device": "cpu", "predictor": "cpu_predictor"})
+        return cpu_model
 
     def _extract_contributions(self, sample_frame, shap_values):
         if hasattr(shap_values, "values"):

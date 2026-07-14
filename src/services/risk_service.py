@@ -1,6 +1,8 @@
-"""应用服务层：协调双模型训练、预测、SHAP 解释与风险分级。"""
+"""Application service layer for training, prediction, and SHAP-based explanation."""
 
 from __future__ import annotations
+
+from pathlib import Path
 
 from src.ml.model_explainer import ModelExplainer
 from src.ml.model_registry import ModelRegistry
@@ -16,7 +18,7 @@ from src.utils.validator import PredictionInputValidator
 
 
 class RiskService:
-    """协调双模型训练、预测与 SHAP 可解释性分析。"""
+    """Coordinate dual-model training, prediction, and interpretability."""
 
     def __init__(self, config):
         self.config = config
@@ -46,17 +48,23 @@ class RiskService:
         }
 
     def train_models(self, run_label="phase1", rounds=None):
-        """支持多轮训练，训练完成后写入清单并记录到 training_results.md。"""
         selected_rounds = rounds or self.default_training_rounds
         if selected_rounds <= 0:
             raise ValueError("rounds must be greater than 0.")
 
         dataframe = self.data_service.get_training_dataframe()
-        result = None
+        all_results = []
         for round_index in range(1, selected_rounds + 1):
             label = run_label or "phase1"
             round_label = f"{label}_round{round_index}" if selected_rounds > 1 else label
-            result = CardioModelTrainer(self.config).train(dataframe, round_label)
+            round_result = CardioModelTrainer(self.config).train(dataframe, round_label)
+            round_result["round_index"] = round_index
+            round_result["run_label"] = round_label
+            round_result["selection_score"] = self._selection_score(round_result)
+            all_results.append(round_result)
+
+        result = max(all_results, key=lambda item: item["selection_score"])
+        self._cleanup_non_best_artifacts(all_results, keep_result=result)
 
         model_paths = {
             target: target_result["model_path"]
@@ -67,16 +75,16 @@ class RiskService:
             for target, target_result in result["targets"].items()
         }
         result["registry"] = self.registry.register(model_paths, metrics)
+        result["selected_rounds"] = selected_rounds
+        result["best_round_index"] = result.get("round_index", 1)
         self.training_recorder.append_multi_round_result(result)
         return result
 
     def estimate_training_time(self):
-        """读取训练数据并执行小样本基准，不写入模型文件。"""
         dataframe = self.data_service.get_training_dataframe()
         return CardioModelTrainer(self.config).estimate(dataframe)
 
     def predict_risk(self, sample):
-        """对单样本执行双模型预测，返回概率、风险分级、SHAP 解释和干预方案。"""
         validator = PredictionInputValidator(required_fields=self.feature_columns)
         validation = validator.validate_payload(sample)
         if not validation["valid"]:
@@ -88,9 +96,7 @@ class RiskService:
             raise ValueError("；".join(details))
 
         normalised_sample = self._normalise_sample(sample)
-        # 模型路径只由后端清单管理，不接受外部传入。
         model_paths = self.registry.load_active_models()
-
         prediction = CardioRiskPredictor().predict(model_paths, normalised_sample)
 
         heart_explanation = self.model_explainer.explain_prediction(
@@ -153,9 +159,46 @@ class RiskService:
         )
         return result
 
+    @staticmethod
+    def _selection_score(training_result):
+        targets = training_result.get("targets", {})
+        if not targets:
+            return float("-inf")
+        scores = []
+        for target_result in targets.values():
+            metrics = target_result.get("metrics", {})
+            roc_auc = float(metrics.get("roc_auc", 0.0) or 0.0)
+            pr_auc = float(metrics.get("pr_auc", 0.0) or 0.0)
+            f1_score = float(metrics.get("f1_score", 0.0) or 0.0)
+            scores.append(roc_auc * 0.6 + pr_auc * 0.3 + f1_score * 0.1)
+        return sum(scores) / len(scores)
+
+    @staticmethod
+    def _cleanup_non_best_artifacts(all_results, keep_result):
+        keep_paths = {
+            Path(target_result["model_path"]).resolve()
+            for target_result in keep_result.get("targets", {}).values()
+            if target_result.get("model_path")
+        }
+        for round_result in all_results:
+            if round_result is keep_result:
+                continue
+            for target_result in round_result.get("targets", {}).values():
+                model_path = target_result.get("model_path")
+                if not model_path:
+                    continue
+                artifact = Path(model_path).resolve()
+                if artifact in keep_paths:
+                    continue
+                try:
+                    artifact.unlink(missing_ok=True)
+                except OSError:
+                    pass
+
     def _build_final_category(self, heart_probability, stroke_probability):
-        """根据双模型概率确定最终类别：0=健康, 1=心脏, 2=卒中, 3=双重。"""
-        heart_positive = heart_probability is not None and heart_probability >= self.thresholds[1]
+        heart_positive = (
+            heart_probability is not None and heart_probability >= self.thresholds[1]
+        )
         stroke_positive = (
             stroke_probability is not None and stroke_probability >= self.thresholds[1]
         )
@@ -168,7 +211,6 @@ class RiskService:
         return 3
 
     def _risk_level(self, probability):
-        """综合等级取两项独立事件概率的较高值，对应项目方案的医学 V 级规则。"""
         if probability < self.thresholds[0]:
             return {"code": 1, "name": "I级：健康", "color": "#16a34a"}
         if probability < self.thresholds[1]:
@@ -180,7 +222,6 @@ class RiskService:
         return {"code": 5, "name": "V级：极高危", "color": "#b91c1c"}
 
     def _build_combined_shap_summary(self, heart_explanation, stroke_explanation):
-        """合并心脏与卒中两模型的 SHAP 贡献度，提取 Top 正向/负向因素。"""
         if not heart_explanation.get("available") or not stroke_explanation.get("available"):
             return {
                 "available": False,
@@ -240,16 +281,24 @@ class RiskService:
             return {"ready": False, "models": {}}
         return {
             "ready": True,
-            "models": {name: model_path.rsplit("\\", 1)[-1].rsplit("/", 1)[-1]
-                       for name, model_path in models.items()},
+            "models": {
+                name: model_path.rsplit("\\", 1)[-1].rsplit("/", 1)[-1]
+                for name, model_path in models.items()
+            },
         }
 
     @staticmethod
     def _normalise_sample(sample):
         normalised = dict(sample)
         for field in (
-            "age", "gender", "cholesterol", "diabetes",
-            "hypertension", "smoker", "alcohol", "exercise",
+            "age",
+            "gender",
+            "cholesterol",
+            "diabetes",
+            "hypertension",
+            "smoker",
+            "alcohol",
+            "exercise",
         ):
             normalised[field] = int(float(normalised[field]))
         normalised["bmi"] = round(float(normalised["bmi"]), 2)
