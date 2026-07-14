@@ -27,13 +27,13 @@ class TaskService:
                 **metadata,
             }
         )
-        return task
+        return self._with_engine_metadata(task)
 
     def get_task(self, task_id: str):
         task = self.database_dao.get_task(task_id)
         if not task:
             raise FileNotFoundError(f"Task not found: {task_id}")
-        return task
+        return self._with_engine_metadata(task)
 
     def update_status(self, task_id: str, status: str, error_message: str | None = None):
         if status not in TASK_STATUSES:
@@ -52,7 +52,15 @@ class TaskService:
         task = self.get_task(task_id)
         if task["total_chunks"] and task["uploaded_chunks"] >= task["total_chunks"]:
             return self.update_status(task_id, "success")
-        return task
+        return self._with_engine_metadata(task)
+
+    def _with_engine_metadata(self, task: dict) -> dict:
+        """在 API 响应层补充执行拓扑，不污染任务表结构。"""
+        result = dict(task)
+        distributed = str(result.get("storage_mode", "local")).lower() == "hdfs"
+        result["storage_engine"] = "hdfs" if distributed else "local_filesystem"
+        result["compute_engine"] = "apache_spark" if distributed else "local_pandas"
+        return result
 
     @staticmethod
     def _build_task_id(filename: str) -> str:

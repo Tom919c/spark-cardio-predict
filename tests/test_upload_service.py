@@ -67,3 +67,41 @@ def test_upload_requires_snapshot_period(tmp_path):
         raise AssertionError("expected ValueError")
     except ValueError as exc:
         assert "data_period" in str(exc)
+
+
+def test_server_data_mode_overrides_client_storage_preference(tmp_path):
+    class FakeHDFS:
+        @staticmethod
+        def is_available():
+            return True
+
+    class HDFSConfig(TestConfig):
+        DATA_MODE = "hdfs"
+        DATABASE_PATH = str(tmp_path / "app.db")
+        UPLOAD_ROOT = str(tmp_path / "uploads")
+
+    service = UploadService(HDFSConfig.as_dict(), hdfs_dao=FakeHDFS())
+
+    task = service.create_upload_task(
+        "sample.csv", 12, 2, use_hdfs=False, data_period="2026-07"
+    )
+
+    assert task["storage_mode"] == "hdfs"
+    assert task["storage_engine"] == "hdfs"
+    assert task["compute_engine"] == "apache_spark"
+
+
+def test_local_mode_cannot_be_switched_to_hdfs_by_client(tmp_path):
+    class LocalConfig(TestConfig):
+        DATA_MODE = "local"
+        DATABASE_PATH = str(tmp_path / "app.db")
+        UPLOAD_ROOT = str(tmp_path / "uploads")
+
+    service = UploadService(LocalConfig.as_dict())
+    task = service.create_upload_task(
+        "sample.csv", 12, 2, use_hdfs=True, data_period="2026-07"
+    )
+
+    assert task["storage_mode"] == "local"
+    assert task["storage_engine"] == "local_filesystem"
+    assert task["compute_engine"] == "local_pandas"

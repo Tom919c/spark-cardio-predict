@@ -9,4 +9,6 @@ def create_database_dao(config):
         from src.dao.mysql_dao import MySQLDatabaseDAO
 
         return MySQLDatabaseDAO(config)
-    return DatabaseDAO(config["DATABASE_PATH"])
+    if database_type == "sqlite":
+        return DatabaseDAO(config["DATABASE_PATH"])
+    raise ValueError("DATABASE_TYPE 仅支持 sqlite 或 mysql。")

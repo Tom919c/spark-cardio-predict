@@ -8,6 +8,8 @@ from pathlib import Path
 
 import joblib
 import pandas as pd
+from sklearn.experimental import enable_iterative_imputer  # noqa: F401
+from sklearn.impute import IterativeImputer
 from sklearn.isotonic import IsotonicRegression
 from sklearn.metrics import precision_recall_curve
 from sklearn.model_selection import train_test_split
@@ -104,6 +106,25 @@ class CardioModelTrainer:
         self._progress(
             f"开始 {target_name} 模型（{index}/{total}），拟合样本 {len(x_fit):,}。"
         )
+        preprocessor = IterativeImputer(
+            random_state=self.random_state,
+            max_iter=10,
+        )
+        x_fit = pd.DataFrame(
+            preprocessor.fit_transform(x_fit),
+            columns=self.feature_columns,
+            index=x_fit.index,
+        )
+        x_calibrate = pd.DataFrame(
+            preprocessor.transform(x_calibrate),
+            columns=self.feature_columns,
+            index=x_calibrate.index,
+        )
+        x_test = pd.DataFrame(
+            preprocessor.transform(x_test),
+            columns=self.feature_columns,
+            index=x_test.index,
+        )
         estimator = self._build_estimator()
         estimator.fit(x_fit, y_fit, sample_weight=weight_fit)
         calibrator = IsotonicRegression(out_of_bounds="clip")
@@ -113,7 +134,13 @@ class CardioModelTrainer:
         )
         calibrated_probabilities = calibrator.predict(estimator.predict_proba(x_calibrate)[:, 1])
         threshold = self._select_threshold(y_calibrate, calibrated_probabilities, target_name)
-        model = CalibratedRiskModel(estimator, calibrator, self.feature_columns, threshold)
+        model = CalibratedRiskModel(
+            estimator,
+            calibrator,
+            self.feature_columns,
+            threshold,
+            preprocessor=preprocessor,
+        )
         probabilities = model.predict_proba(x_test)[:, 1]
         predictions = model.predict(x_test)
         metrics = ModelEvaluator().evaluate_binary(y_test, predictions, probabilities)

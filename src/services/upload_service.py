@@ -24,7 +24,7 @@ class UploadService:
         self.hdfs_raw_path = config.get("HDFS_RAW_PATH", "")
         self.hdfs_dao = hdfs_dao or HDFSDao.from_config(config)
 
-    def create_upload_task(self, filename: str, file_size: int, total_chunks: int, use_hdfs: bool = False, data_period: str | None = None):
+    def create_upload_task(self, filename: str, file_size: int, total_chunks: int, use_hdfs: bool | None = None, data_period: str | None = None):
         original_name = Path(str(filename)).name
         if Path(original_name).suffix.lower() != ".csv":
             raise ValueError("目前只支持 CSV 文件。")
@@ -38,7 +38,12 @@ class UploadService:
         data_period = str(data_period or "").strip()
         if not data_period or not re.fullmatch(r"\d{4}-(?:0[1-9]|1[0-2]|Q[1-4])", data_period):
             raise ValueError("data_period 必须使用 YYYY-MM 或 YYYY-Qn 格式。")
-        storage_mode = "hdfs" if use_hdfs else "local"
+        # 存储拓扑属于服务端部署配置，不能由浏览器请求切换。保留
+        # use_hdfs 参数仅用于兼容旧调用方，其值不会影响实际存储模式。
+        data_mode = str(self.config.get("DATA_MODE", "local")).strip().lower()
+        if data_mode not in {"local", "hdfs"}:
+            raise ValueError("DATA_MODE 仅支持 local 或 hdfs。")
+        storage_mode = data_mode
         if storage_mode == "hdfs" and not self.hdfs_dao.is_available():
             raise ValueError("当前未配置可用的 HDFS 客户端。")
         return self.task_service.create_task(

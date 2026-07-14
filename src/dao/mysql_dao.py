@@ -105,6 +105,25 @@ class MySQLDatabaseDAO:
                     )
                     """
                 )
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS assessment_records (
+                        assessment_id VARCHAR(128) PRIMARY KEY,
+                        client_hash VARCHAR(128) NOT NULL,
+                        model_version VARCHAR(128),
+                        knowledge_version VARCHAR(128),
+                        heart_probability DOUBLE NOT NULL,
+                        stroke_probability DOUBLE NOT NULL,
+                        risk_level_code INT NOT NULL,
+                        risk_level_name VARCHAR(64) NOT NULL,
+                        final_category INT NOT NULL,
+                        input_json LONGTEXT NOT NULL,
+                        result_json LONGTEXT NOT NULL,
+                        created_at VARCHAR(64) NOT NULL,
+                        INDEX idx_assessment_client_created (client_hash, created_at)
+                    )
+                    """
+                )
 
     def create_task(self, task: dict[str, Any]):
         now = self.now()
@@ -229,3 +248,51 @@ class MySQLDatabaseDAO:
         with self._connect() as connection:
             with connection.cursor() as cursor:
                 cursor.execute(f"UPDATE datasets SET {columns} WHERE dataset_id=%s", tuple(fields.values()) + (dataset_id,))
+
+    def create_assessment(self, assessment):
+        payload = {
+            "assessment_id": assessment["assessment_id"],
+            "client_hash": assessment["client_hash"],
+            "model_version": assessment.get("model_version"),
+            "knowledge_version": assessment.get("knowledge_version"),
+            "heart_probability": float(assessment.get("heart_probability", 0)),
+            "stroke_probability": float(assessment.get("stroke_probability", 0)),
+            "risk_level_code": int(assessment.get("risk_level_code", 1)),
+            "risk_level_name": assessment.get("risk_level_name", "I级：健康"),
+            "final_category": int(assessment.get("final_category", 0)),
+            "input_json": assessment.get("input_json", "{}"),
+            "result_json": assessment.get("result_json", "{}"),
+            "created_at": assessment.get("created_at") or self.now(),
+        }
+        columns = ", ".join(payload)
+        placeholders = ", ".join(["%s"] * len(payload))
+        with self._connect() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    f"INSERT INTO assessment_records ({columns}) VALUES ({placeholders})",
+                    tuple(payload.values()),
+                )
+        return payload
+
+    def get_assessment(self, assessment_id):
+        with self._connect() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "SELECT * FROM assessment_records WHERE assessment_id=%s",
+                    (assessment_id,),
+                )
+                return cursor.fetchone()
+
+    def list_assessments(self, client_hash, limit=10):
+        with self._connect() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT * FROM assessment_records
+                    WHERE client_hash=%s
+                    ORDER BY created_at DESC
+                    LIMIT %s
+                    """,
+                    (client_hash, int(limit)),
+                )
+                return list(cursor.fetchall())

@@ -132,6 +132,10 @@
     if (trendReady && window.echarts) {
       fetchJson('/api/trends/snapshots').then(function(result) {
         const snapshots = result.snapshots || [];
+        if (snapshots.length < 2) {
+          renderSnapshotTrend(snapshots);
+          return null;
+        }
         return fetchJson('/api/trends/compare', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -234,10 +238,11 @@
           try {
             const chunkSize = Number(chunkEl && chunkEl.value) || (8 * 1024 * 1024);
             const totalChunks = Math.ceil(selectedFile.size / chunkSize);
-            const periodFromFilename = selectedFile.name.match(/(20\d{2}-(?:0[1-9]|1[0-2]))/);
-            const dataPeriod = periodFromFilename
-              ? periodFromFilename[1]
-              : new Date(selectedFile.lastModified || Date.now()).toISOString().slice(0, 7);
+            const periodInput = document.getElementById('phase2DataPeriod');
+            const dataPeriod = String(periodInput?.value || '').trim();
+            if (!/^\d{4}-(?:0[1-9]|1[0-2]|Q[1-4])$/.test(dataPeriod)) {
+              throw new Error('请填写正确的数据所属时期，例如 2026-07 或 2026-Q3。');
+            }
             const initResp = await fetch(endpoint, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -280,6 +285,24 @@
     }
   }
 
+  async function loadPlatformCapabilities() {
+    const database = document.getElementById('phase2DatabaseEngine');
+    const storage = document.getElementById('phase2StorageEngine');
+    const compute = document.getElementById('phase2ComputeEngine');
+    if (!database && !storage && !compute) return;
+    try {
+      const payload = await fetchJson('/api/capabilities');
+      const data = payload.data || {};
+      if (database) database.textContent = String(data.database?.type || 'sqlite').toUpperCase();
+      if (storage) storage.textContent = data.storage_engine === 'hdfs' ? 'HDFS / WebHDFS' : '本地文件系统';
+      if (compute) compute.textContent = data.compute_engine === 'apache_spark' ? 'Apache Spark' : 'Pandas 本地引擎';
+    } catch (_) {
+      if (database) database.textContent = '状态未知';
+      if (storage) storage.textContent = '状态未知';
+      if (compute) compute.textContent = '状态未知';
+    }
+  }
+
   async function initResultEnhancement() {
     const target = document.getElementById('phase2WhatIf');
     if (!target) return;
@@ -315,6 +338,7 @@
 
   async function boot() {
     await ensureECharts();
+    await loadPlatformCapabilities();
     initDashboardEnhancement();
     initResultEnhancement();
     initShapEnhancement();

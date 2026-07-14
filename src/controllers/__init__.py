@@ -1,4 +1,5 @@
 from src.controllers.analysis_controller import analysis_bp
+from src.controllers.assessment_controller import assessment_bp
 from src.controllers.data_controller import data_bp
 from src.controllers.health_controller import health_bp
 from src.controllers.page_controller import pages_bp
@@ -23,3 +24,4 @@ def register_blueprints(app):
     app.register_blueprint(dataset_bp, url_prefix="/api/datasets")
     app.register_blueprint(trend_bp, url_prefix="/api/trends")
     app.register_blueprint(analysis_bp, url_prefix="/api/analysis")
+    app.register_blueprint(assessment_bp, url_prefix="/api/assessments")

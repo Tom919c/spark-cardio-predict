@@ -37,6 +37,49 @@ def test_health_and_page_routes_are_available():
     assert client.get("/").status_code == 200
     assert client.get("/dashboard").status_code == 200
     assert client.get("/risk-report").status_code == 200
+    assert client.get("/api/risk/train").status_code == 405
+    dashboard = client.get("/dashboard").get_data(as_text=True)
+    assert 'id="phase2DataPeriod"' in dashboard
+    assert 'id="phase2DatabaseEngine"' in dashboard
+
+
+def test_personal_report_flow_has_one_primary_explanation_path():
+    client = create_app().test_client()
+
+    risk_page = client.get("/risk-report").get_data(as_text=True)
+    result_page = client.get("/result-report").get_data(as_text=True)
+    shap_page = client.get("/shap-analysis").get_data(as_text=True)
+
+    assert "查看完整风险报告" in risk_page
+    assert "查看完整风险原因分析" not in risk_page
+    assert "maximum-scale" not in risk_page
+    assert '<main class="page-wrap" id="main-content">' in risk_page
+    assert "专业模型解释" in result_page
+    assert "返回完整报告" in shap_page
+    assert "不代表医学因果关系" in shap_page
+
+
+def test_capabilities_report_runtime_topology(tmp_path):
+    class TestConfig(BaseConfig):
+        DATA_MODE = "local"
+        DATABASE_TYPE = "sqlite"
+        DATABASE_PATH = str(tmp_path / "app.db")
+        MODEL_OUTPUT_DIR = str(tmp_path / "models")
+        MODEL_MANIFEST_PATH = str(tmp_path / "models" / "missing.json")
+
+    response = create_app(TestConfig).test_client().get("/api/capabilities")
+
+    assert response.status_code == 200
+    data = response.get_json()["data"]
+    assert data["database"]["type"] == "sqlite"
+    assert data["database"]["supported_types"] == ["sqlite", "mysql"]
+    assert data["data_mode"] == "local"
+    assert data["storage_engine"] == "local_filesystem"
+    assert data["compute_engine"] == "local_pandas"
+    assert data["hdfs"]["enabled"] is False
+    assert "cli_detected" in data["hdfs"]
+    assert data["spark"]["analysis_script_exists"] is True
+    assert data["models"]["ready"] is False
 
 
 def test_risk_predict_rejects_incomplete_payload():
@@ -79,6 +122,15 @@ def test_risk_predict_rejects_invalid_values():
     assert response.status_code == 400
     assert "字段取值无效" in response.get_json()["message"]
 
+    auxiliary_response = app.test_client().post(
+        "/api/risk/predict",
+        json={"age": 70, "gender": 1, "bmi": 31, "cholesterol": 3,
+              "diabetes": 1, "hypertension": 1, "smoker": 2,
+              "alcohol": 1, "exercise": 0, "systolic_bp": 999},
+    )
+    assert auxiliary_response.status_code == 400
+    assert "systolic_bp" in auxiliary_response.get_json()["message"]
+
 
 def test_risk_predict_returns_two_probabilities(tmp_path):
     _write_test_models(tmp_path)
@@ -109,6 +161,8 @@ def test_risk_predict_returns_two_probabilities(tmp_path):
     assert data["heart_predicted_probability"] >= 0
     assert data["stroke_predicted_probability"] >= 0
     assert data["intervention_plan"]["risk_level"]["code"] in {1, 2, 3, 4, 5}
+    assert data["model_scope"]["type"] == "screening_proxy"
+    assert data["intervention_plan"]["actions"]
 
 
 def test_train_estimate_reports_missing_dataset_clearly(tmp_path):

@@ -192,6 +192,39 @@ def test_high_risk_follow_up_is_not_dropped_when_many_factors_match():
     assert result["suggestions"][0]["rule_id"] == "high-risk-follow-up"
 
 
+def test_knowledge_service_builds_three_friendly_deduplicated_actions():
+    service = KnowledgeService(Path("resources/knowledge/intervention_rules.json"))
+    result = service.build_plan(
+        {
+            "hypertension": 1,
+            "cholesterol": 3,
+            "diabetes": 1,
+            "smoker": 2,
+            "alcohol": 1,
+            "exercise": 0,
+            "bmi": 30,
+        },
+        {"code": 5},
+    )
+
+    assert len(result["actions"]) == 3
+    assert len({item["domain"] for item in result["actions"]}) == 3
+    assert result["focus_summary"].startswith("您现在最需要关注的是")
+    assert "2 周内" in result["follow_up"]
+    assert "120" in result["emergency_warning"]
+
+
+def test_high_bmi_does_not_trigger_exercise_advice_when_activity_is_regular():
+    service = KnowledgeService(Path("resources/knowledge/intervention_rules.json"))
+    result = service.build_plan(
+        {"bmi": 28, "exercise": 1, "hypertension": 0, "cholesterol": 1},
+        {"code": 2},
+    )
+
+    assert [item["domain"] for item in result["actions"]] == ["bmi"]
+    assert "体重" in result["actions"][0]["text"]
+
+
 def test_phase2_analysis_service_writes_summary(tmp_path):
     dataframe = pd.DataFrame(
         {

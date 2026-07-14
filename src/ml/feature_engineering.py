@@ -30,7 +30,7 @@ class CardioFeatureEngineering:
             "random_state": self.random_state,
         }
 
-    def build_training_dataframe(self, dataframe):
+    def build_training_dataframe(self, dataframe, impute=True):
         missing = [c for c in self.feature_columns if c not in dataframe]
         if missing:
             raise ValueError(f"数据缺少必要特征列: {missing}")
@@ -39,13 +39,18 @@ class CardioFeatureEngineering:
         feature_frame = working_frame[self.feature_columns].apply(
             pd.to_numeric, errors="coerce"
         )
-        imputer = IterativeImputer(random_state=self.random_state, max_iter=10)
-        imputed = pd.DataFrame(
-            imputer.fit_transform(feature_frame),
-            columns=self.feature_columns,
-            index=working_frame.index,
+        if impute:
+            # 仅用于数据预览/质量检查。正式训练会在切分训练集后拟合插补器，
+            # 防止测试集分布进入预处理参数。
+            imputer = IterativeImputer(random_state=self.random_state, max_iter=10)
+            feature_frame = pd.DataFrame(
+                imputer.fit_transform(feature_frame),
+                columns=self.feature_columns,
+                index=working_frame.index,
+            )
+        model_frame = self._normalise_feature_values(
+            feature_frame, preserve_missing=not impute
         )
-        model_frame = self._normalise_feature_values(imputed)
         model_frame["label_heart"] = working_frame["label_heart"].astype(int)
         model_frame["label_stroke"] = working_frame["label_stroke"].astype(int)
         model_frame["sample_weight"] = self._build_sample_weight(working_frame)
@@ -64,15 +69,21 @@ class CardioFeatureEngineering:
             target_frame["label_stroke"] = (target_frame[self.target_column] == 2).astype(int)
         return target_frame
 
-    def _normalise_feature_values(self, dataframe):
+    def _normalise_feature_values(self, dataframe, preserve_missing=False):
         frame = dataframe.copy()
         # 插补输出为连续值，离散医疗编码必须回写到模型约定的合法取值范围。
-        frame["age"] = frame["age"].clip(18, 95).round().astype(int)
+        frame["age"] = frame["age"].clip(18, 95).round()
         frame["bmi"] = frame["bmi"].clip(10.3, 79.8).round(2)
-        frame["cholesterol"] = frame["cholesterol"].clip(1, 3).round().astype(int)
-        frame["smoker"] = frame["smoker"].clip(0, 2).round().astype(int)
+        frame["cholesterol"] = frame["cholesterol"].clip(1, 3).round()
+        frame["smoker"] = frame["smoker"].clip(0, 2).round()
         for col in ("gender", "diabetes", "hypertension", "alcohol", "exercise"):
-            frame[col] = frame[col].clip(0, 1).round().astype(int)
+            frame[col] = frame[col].clip(0, 1).round()
+        if not preserve_missing:
+            integer_columns = [
+                "age", "cholesterol", "smoker", "gender", "diabetes",
+                "hypertension", "alcohol", "exercise",
+            ]
+            frame[integer_columns] = frame[integer_columns].astype(int)
         return frame
 
     @staticmethod

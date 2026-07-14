@@ -85,6 +85,24 @@ class DatabaseDAO:
                     upload_time TEXT NOT NULL,
                     FOREIGN KEY (task_id) REFERENCES upload_tasks(task_id)
                 );
+
+                CREATE TABLE IF NOT EXISTS assessment_records (
+                    assessment_id TEXT PRIMARY KEY,
+                    client_hash TEXT NOT NULL,
+                    model_version TEXT,
+                    knowledge_version TEXT,
+                    heart_probability REAL NOT NULL,
+                    stroke_probability REAL NOT NULL,
+                    risk_level_code INTEGER NOT NULL,
+                    risk_level_name TEXT NOT NULL,
+                    final_category INTEGER NOT NULL,
+                    input_json TEXT NOT NULL,
+                    result_json TEXT NOT NULL,
+                    created_at TEXT NOT NULL
+                );
+
+                CREATE INDEX IF NOT EXISTS idx_assessment_client_created
+                ON assessment_records(client_hash, created_at DESC);
                 """
             )
             self._ensure_task_columns(connection)
@@ -306,3 +324,52 @@ class DatabaseDAO:
             connection.execute(
                 f"UPDATE datasets SET {columns} WHERE dataset_id = ?", tuple(values)
             )
+
+    def create_assessment(self, assessment: dict[str, Any]) -> dict[str, Any]:
+        payload = {
+            "assessment_id": assessment["assessment_id"],
+            "client_hash": assessment["client_hash"],
+            "model_version": assessment.get("model_version"),
+            "knowledge_version": assessment.get("knowledge_version"),
+            "heart_probability": float(assessment.get("heart_probability", 0)),
+            "stroke_probability": float(assessment.get("stroke_probability", 0)),
+            "risk_level_code": int(assessment.get("risk_level_code", 1)),
+            "risk_level_name": assessment.get("risk_level_name", "I级：健康"),
+            "final_category": int(assessment.get("final_category", 0)),
+            "input_json": assessment.get("input_json", "{}"),
+            "result_json": assessment.get("result_json", "{}"),
+            "created_at": assessment.get("created_at") or self.now(),
+        }
+        with self._connect() as connection:
+            connection.execute(
+                """
+                INSERT INTO assessment_records (
+                    assessment_id, client_hash, model_version, knowledge_version,
+                    heart_probability, stroke_probability, risk_level_code,
+                    risk_level_name, final_category, input_json, result_json, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                tuple(payload.values()),
+            )
+        return payload
+
+    def get_assessment(self, assessment_id: str) -> dict[str, Any] | None:
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT * FROM assessment_records WHERE assessment_id = ?",
+                (assessment_id,),
+            ).fetchone()
+        return dict(row) if row else None
+
+    def list_assessments(self, client_hash: str, limit: int = 10) -> list[dict[str, Any]]:
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT * FROM assessment_records
+                WHERE client_hash = ?
+                ORDER BY created_at DESC
+                LIMIT ?
+                """,
+                (client_hash, int(limit)),
+            ).fetchall()
+        return [dict(row) for row in rows]

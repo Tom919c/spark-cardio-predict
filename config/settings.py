@@ -53,11 +53,13 @@ class BaseConfig:
 
     APP_NAME = "CardioSpark"
     SECRET_KEY = os.getenv("SECRET_KEY", "development-only-secret")
+    # 用 HMAC 对浏览器生成的匿名客户端标识做不可逆映射；生产环境应单独配置。
+    ASSESSMENT_HASH_KEY = os.getenv("ASSESSMENT_HASH_KEY", SECRET_KEY)
     JSON_AS_ASCII = False
 
     HOST = os.getenv("HOST", "127.0.0.1")
     PORT = _as_int("PORT", 5000)
-    DEBUG = _as_bool(os.getenv("DEBUG"), True)
+    DEBUG = _as_bool(os.getenv("DEBUG"), False)
     APP_ENV = os.getenv("APP_ENV", "development")
 
     # 默认本地模式，未启动 HDFS 时 Flask 仍可用于演示和接口测试。
@@ -102,6 +104,10 @@ class BaseConfig:
     )
     UPLOAD_MAX_FILE_SIZE = _as_int("UPLOAD_MAX_FILE_SIZE", 512 * 1024 * 1024)
     UPLOAD_CHUNK_SIZE = _as_int("UPLOAD_CHUNK_SIZE", 8 * 1024 * 1024)
+    # Flask 单请求只承载一个分片；完整文件由分片任务合并，避免超大请求占满内存。
+    MAX_CONTENT_LENGTH = _as_int(
+        "MAX_CONTENT_LENGTH", UPLOAD_CHUNK_SIZE + 1024 * 1024
+    )
     LOCAL_ANALYSIS_CHUNK_SIZE = _as_int("LOCAL_ANALYSIS_CHUNK_SIZE", 100_000)
     TASK_WORKERS = _as_int("TASK_WORKERS", 2)
     PRIVACY_MIN_GROUP_SIZE = _as_int("PRIVACY_MIN_GROUP_SIZE", 5)

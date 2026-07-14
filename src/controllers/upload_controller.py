@@ -22,7 +22,6 @@ def create_task():
             filename=payload["filename"],
             file_size=int(payload.get("file_size", 0)),
             total_chunks=int(payload.get("total_chunks", 0)),
-            use_hdfs=bool(payload.get("use_hdfs", False)),
             data_period=payload.get("data_period"),
         )
     except KeyError as exc:

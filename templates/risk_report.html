@@ -2,14 +2,15 @@
  <html lang="zh-CN">
  <head>
  <meta charset="UTF-8">
- <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0">
+ <meta name="description" content="CardioSpark 心脑血管风险筛查教学原型，用于健康风险提示，不提供临床诊断。">
  <title>CardioSpark 个人心脑血管风险评估</title>
  
  <!-- ===== CDN 引入 ===== -->
 <script src="{{ url_for('static', filename='tailwind/tailwind.js') }}"></script>
 <script src="{{ url_for('static', filename='echarts/echarts.min.js') }}"></script>
- <link rel="stylesheet" href="{{ url_for('static', filename='css/page-switcher.css') }}">
- <link rel="stylesheet" href="{{ url_for('static', filename='css/phase2.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/page-switcher.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/phase2.css') }}">
  
  <style>
  /* ===== 全局基础 ===== */
@@ -80,7 +81,7 @@
    display:flex;align-items:center;gap:4px;
  }
  .form-label .required{color:#EF4444;font-weight:700}
- .form-hint{font-size:12px;color:#94A3B8;margin-top:1px}
+ .form-hint{font-size:12px;color:#64748B;margin-top:1px}
  
  .form-input,.form-select{
    width:100%;padding:10px 14px;
@@ -471,16 +472,19 @@
  }
  @media(max-width:420px){.what-if-switch-list{grid-template-columns:1fr}.what-if-choice span{font-size:12px;padding-left:7px;padding-right:7px}}
 
+ .skip-link{position:fixed;left:16px;top:12px;z-index:50;transform:translateY(-160%);background:#1E3A8A;color:#fff;padding:10px 14px;border-radius:8px;text-decoration:none;font-weight:600}
+ .skip-link:focus{transform:translateY(0)}
+ .prototype-note{max-width:760px;margin:16px auto 0;padding:12px 16px;border:1px solid #BFDBFE;border-radius:12px;background:#EFF6FF;color:#334155;font-size:14px;line-height:1.7}
+
  </style>
- <link rel="stylesheet" href="{{ url_for('static', filename='css/cardiospark-redesign.css') }}">
  
  <!-- Tailwind 自定义 -->
  <script>tailwind.config={theme:{extend:{colors:{primary:{50:'#EFF6FF',100:'#DBEAFE',500:'#3B82F6',600:'#2563EB',700:'#1D4ED8',800:'#1E40AF'}}}}}</script>
  </head>
  
- <body class="page-risk">
-
-  <div class="page-wrap">
+  <body>
+  <a class="skip-link" href="#main-content">跳到主要内容</a>
+  <main class="page-wrap" id="main-content">
 
   <div class="app-switcher-bar" aria-label="业务端切换">
     <div class="app-switcher-bar__brand">
@@ -507,8 +511,9 @@
      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
      CardioSpark
    </div>
-   <h1>心脑血管疾病 AI 风险评估</h1>
-   <p>基于<strong>60万+</strong>多源临床数据 · <strong>中国人群</strong>本土化校准模型<br>3 分钟完成评估，获取个性化健康指导</p>
+   <h1>心脑血管健康风险筛查</h1>
+   <p>基于多源公开健康数据构建的教学筛查模型<br>约 3 分钟完成评估，获得风险提示与健康行动建议</p>
+   <div class="prototype-note" role="note">本系统为课程项目中的风险筛查原型，结果是模型风险分值，不等同于真实发病概率，也不构成诊断、处方或治疗建议。</div>
  </div>
  
  <!-- ============================================================
@@ -518,7 +523,7 @@
  
    <!-- 2-1：基础信息 -->
    <div class="card">
-     <div class="form-section-title">
+      <div class="form-section-title">
        <span class="icon basic">
          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
        </span>
@@ -565,8 +570,11 @@
        <span class="icon physio">
          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
        </span>
-       生理指标
-     </div>
+        生理指标
+      </div>
+      <p style="margin:-2px 0 16px;color:#52657a;font-size:13px;line-height:1.7;">
+        胆固醇分级和既往病史会进入九特征筛查模型；本次血压、血糖与家族史仅用于辅助健康提示，不直接改变模型风险分值。
+      </p>
      <div class="form-grid">
        <!-- 收缩压 -->
        <div class="form-group">
@@ -688,7 +696,7 @@
        <div id="gaugeChart" aria-label="综合风险概率仪表盘"></div>
        <div class="gauge-reading" aria-live="polite">
          <strong id="gaugeValue">--</strong>
-         <span>综合风险概率</span>
+         <span>综合筛查风险分值</span>
        </div>
        <div class="gauge-scale" aria-label="风险区间">
          <div class="gauge-scale__item gauge-scale__item--low"><b>0 - 40%</b>风险较低</div>
@@ -701,11 +709,11 @@
   <!-- 3-2：风险等级 + 临床指导 -->
   <div class="risk-probabilities">
     <div class="risk-probability">
-      <div class="risk-probability__label"><span class="risk-probability__dot"></span>心脏事件风险</div>
+      <div class="risk-probability__label"><span class="risk-probability__dot"></span>心脏模型风险分值</div>
       <strong id="heartProbVal">--</strong>
     </div>
    <div class="risk-probability risk-probability--stroke">
-     <div class="risk-probability__label"><span class="risk-probability__dot"></span>卒中风险</div>
+     <div class="risk-probability__label"><span class="risk-probability__dot"></span>卒中模型风险分值</div>
      <strong id="strokeProbVal">--</strong>
    </div>
   </div>
@@ -715,14 +723,14 @@
        <div class="risk-level-card" id="riskLevelCard">
          <div class="label">心脑血管疾病风险等级</div>
          <div class="value" id="riskLevelDisplay">--</div>
-         <div class="prob" id="riskProbDisplay">发病概率：--</div>
+         <div class="prob" id="riskProbDisplay">模型风险分值：--</div>
        </div>
      </div>
      <div>
        <div class="guide-card">
          <div class="title">
            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-           临床复查指导
+            复查与健康管理提示
          </div>
         <div class="text" id="guideText">--</div>
       </div>
@@ -730,29 +738,6 @@
   </div>
 
   <!-- 3-3：个性化干预建议 -->
-  <!-- 3-3A：AI 风险因素分析（SHAP） -->
-  <div class="card shap-section" id="shapSection" style="display:none;">
-    <div class="form-section-title" style="border-bottom-color:#DBEAFE;">
-      <span class="icon basic" style="background:#DBEAFE;color:#2563EB;">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 11H5a2 2 0 0 0-2 2v7h18v-7a2 2 0 0 0-2-2h-4"/><rect x="9" y="3" width="6" height="8" rx="1"/></svg>
-      </span>
-      AI 风险因素分析
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-      <div>
-        <div style="font-size:13px;font-weight:600;color:#475569;margin-bottom:4px;">推高风险的因素</div>
-        <div id="positiveShapChart" style="height:220px;"></div>
-      </div>
-      <div>
-        <div style="font-size:13px;font-weight:600;color:#475569;margin-bottom:4px;">降低风险的因素</div>
-        <div id="negativeShapChart" style="height:220px;"></div>
-      </div>
-    </div>
-    <div id="shapUnavailable" style="display:none;text-align:center;padding:16px;color:#94A3B8;font-size:14px;">
-      SHAP 解释暂不可用。安装 shap 库后可查看风险因素分析。
-    </div>
-  </div>
-
   <div class="card">
      <div class="form-section-title" style="border-bottom-color:#DBEAFE;">
        <span class="icon basic" style="background:#DBEAFE;color:#2563EB;">
@@ -824,13 +809,22 @@
   <!-- 3-4：重新评估 -->
   <!-- 3-3B：详细报告导航 -->
   <div class="result-nav" style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:16px;">
-    <a href="{{ url_for('pages.result_report_page') }}" style="display:inline-flex;align-items:center;gap:8px;padding:10px 24px;border-radius:10px;font-size:14px;font-weight:600;text-decoration:none;background:linear-gradient(135deg,#1E40AF,#3B82F6);color:#fff;box-shadow:0 2px 8px rgba(59,130,246,0.25);transition:all 0.2s;">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>查看详细报告
-    </a>
-    <a href="{{ url_for('pages.shap_analysis_page') }}" style="display:inline-flex;align-items:center;gap:8px;padding:10px 24px;border-radius:10px;font-size:14px;font-weight:600;text-decoration:none;border:1.5px solid #CBD5E1;color:#475569;background:#F8FAFC;transition:all 0.2s;">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 11H5a2 2 0 0 0-2 2v7h18v-7a2 2 0 0 0-2-2h-4"/><rect x="9" y="3" width="6" height="8" rx="1"/></svg>查看完整风险原因分析
+    <a href="{{ url_for('pages.result_report_page') }}" style="display:inline-flex;align-items:center;gap:8px;padding:12px 28px;border-radius:10px;font-size:15px;font-weight:600;text-decoration:none;background:linear-gradient(135deg,#1E40AF,#3B82F6);color:#fff;box-shadow:0 2px 8px rgba(59,130,246,0.25);transition:all 0.2s;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>查看完整风险报告
     </a>
   </div>
+
+  <section class="card" id="assessmentHistoryCard" style="margin-top:18px;">
+    <div class="section-header">
+      <div>
+        <div class="section-title">最近评估记录</div>
+        <div class="section-subtitle">记录匿名保存在当前配置的 SQLite / MySQL 元数据数据库中</div>
+      </div>
+    </div>
+    <div id="assessmentHistoryList" class="suggestion-list" aria-live="polite">
+      <div class="suggestion-item">完成评估后，这里会显示最近的风险变化。</div>
+    </div>
+  </section>
 
   <div style="text-align:center;padding:8px 0 0;">
     <button onclick="scrollToForm()" style="background:none;border:1.5px solid #CBD5E1;border-radius:10px;padding:10px 28px;font-size:14px;color:#64748B;cursor:pointer;font-family:inherit;">重新填写信息</button>
@@ -838,7 +832,7 @@
 
  </div>
  
- </div><!-- /.page-wrap -->
+ </main><!-- /.page-wrap -->
  
  <!-- ===== 错误弹窗（新增） ===== -->
  <div class="modal-overlay hidden" id="errorModalOverlay">
@@ -858,6 +852,41 @@
   *  模块0：全局配置
   * =========================================================================== */
  const API_BASE = '';
+ const ASSESSMENT_CLIENT_KEY = 'cardiospark_assessment_client_id';
+
+ function getAssessmentClientId() {
+   return localStorage.getItem(ASSESSMENT_CLIENT_KEY) || '';
+ }
+
+ async function loadAssessmentHistory() {
+   const clientId = getAssessmentClientId();
+   const list = document.getElementById('assessmentHistoryList');
+   if (!clientId || !list) return;
+   try {
+     const response = await fetch(API_BASE + '/api/assessments?limit=5', {
+       headers: { 'Accept': 'application/json', 'X-Client-ID': clientId }
+     });
+     const payload = await parseApiResponse(response);
+     if (!response.ok || !payload.success) throw new Error(payload.message || '历史记录读取失败');
+     const items = payload.data?.items || [];
+     list.innerHTML = '';
+     if (!items.length) {
+       list.textContent = '暂无历史记录。';
+       return;
+     }
+     items.forEach(function(item) {
+       const row = document.createElement('div');
+       row.className = 'suggestion-item';
+       const created = item.created_at ? new Date(item.created_at).toLocaleString('zh-CN') : '--';
+       row.textContent = created + ' · ' + item.risk_level.name +
+         ' · 心脏 ' + (Number(item.heart_probability) * 100).toFixed(1) + '%' +
+         ' / 卒中 ' + (Number(item.stroke_probability) * 100).toFixed(1) + '%';
+       list.appendChild(row);
+     });
+   } catch (error) {
+     list.textContent = '历史记录暂时无法读取，本次评估不受影响。';
+   }
+ }
  
  /* ===========================================================================
   *  模块B：表单交互
@@ -986,28 +1015,44 @@
    try {
      // 将原页面的体检输入转换为后端 DWD 的九个标准字段。
      const cholesterolValue = parseFloat(formData.cholesterol);
-     const payload = {
-       age: parseInt(formData.age),
+      const modelInput = {
+        age: parseInt(formData.age),
        gender: parseInt(formData.gender),
        bmi: Number(formData.bmi),
        cholesterol: cholesterolValue >= 6.2 ? 3 : (cholesterolValue >= 5.2 ? 2 : 1),
        diabetes: parseInt(formData.diabetes),
        hypertension: parseInt(formData.hypertension),
        smoker: parseInt(formData.smoking),
-       alcohol: parseInt(formData.alcohol),
-       exercise: parseInt(formData.exercise)
-     };
-     const resp = await fetch(API_BASE + '/api/risk/predict', {
-       method: 'POST',
-       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-      body: JSON.stringify(payload)
-    });
+        alcohol: parseInt(formData.alcohol),
+        exercise: parseInt(formData.exercise)
+      };
+      const payload = {
+        ...modelInput,
+        systolic_bp: Number(formData.sbp),
+        diastolic_bp: Number(formData.dbp),
+        fasting_glucose: Number(formData.glucose),
+        family_history: parseInt(formData.family_history)
+      };
+      const clientId = getAssessmentClientId();
+      const resp = await fetch(API_BASE + '/api/risk/predict', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          ...(clientId ? { 'X-Client-ID': clientId } : {})
+        },
+       body: JSON.stringify(payload)
+     });
      const respData = await parseApiResponse(resp);
-    if (!resp.ok || !respData.success) throw new Error(respData.message || ('HTTP ' + resp.status));
-    const prediction = respData.data;
-    currentRiskInput = payload;
-    sessionStorage.setItem('cardiospark_latest_result', JSON.stringify(prediction));
-    renderResults(prediction);
+     if (!resp.ok || !respData.success) throw new Error(respData.message || ('HTTP ' + resp.status));
+     const prediction = respData.data;
+     if (prediction.assessment_client_id) {
+       localStorage.setItem(ASSESSMENT_CLIENT_KEY, prediction.assessment_client_id);
+     }
+     currentRiskInput = modelInput;
+     sessionStorage.setItem('cardiospark_latest_result', JSON.stringify(prediction));
+     renderResults(prediction);
+     loadAssessmentHistory();
     document.getElementById('resultArea').scrollIntoView({ behavior: 'smooth', block: 'start' });
  
    } catch (err) {
@@ -1024,13 +1069,6 @@
  *  模块D：结果渲染
  * =========================================================================== */
 
-var positiveShap = null;
-var negativeShap = null;
-var FEATURE_LABELS = {
-  age: '年龄', gender: '性别', bmi: 'BMI', cholesterol: '胆固醇',
-  diabetes: '糖尿病', hypertension: '高血压', smoker: '吸烟', alcohol: '饮酒', exercise: '运动'
-};
-
 function renderResults(prediction) {
   const area = document.getElementById('resultArea');
   area.classList.remove('visible');
@@ -1045,32 +1083,23 @@ function renderResults(prediction) {
   const heartProb = prediction.heart_predicted_probability || 0;
   const strokeProb = prediction.stroke_predicted_probability || 0;
   const maxProb = Math.max(heartProb, strokeProb);
-  document.getElementById('riskProbDisplay').textContent = '综合发病概率：' + (maxProb * 100).toFixed(1) + '%';
+  document.getElementById('riskProbDisplay').textContent = '模型风险分值：' + (maxProb * 100).toFixed(1) + '%';
   document.getElementById('guideText').textContent = prediction.risk_summary || '--';
   document.getElementById('heartProbVal').textContent = (heartProb * 100).toFixed(1) + '%';
   document.getElementById('strokeProbVal').textContent = (strokeProb * 100).toFixed(1) + '%';
 
-  var shapSummary = prediction.combined_shap_summary || {};
-  var shapSection = document.getElementById('shapSection');
-  if (shapSummary.available) {
-    shapSection.style.display = 'block';
-    document.getElementById('shapUnavailable').style.display = 'none';
-    renderShapChart('positiveShapChart', shapSummary.top_positive_factors || [], '#ffb0c0', '#ff7a92');
-    renderShapChart('negativeShapChart', shapSummary.top_negative_factors || [], '#9af0c3', '#58d99a');
-  } else {
-    shapSection.style.display = 'block';
-    document.getElementById('shapUnavailable').style.display = 'block';
-  }
-
   const list = document.getElementById('suggestionList');
-  const suggestions = (prediction.intervention_plan && prediction.intervention_plan.suggestions) || [];
-  if (suggestions.length > 0) {
-    list.innerHTML = '<div class="suggestion-list-heading">健康管理建议</div>' + suggestions.map(function(desc) {
+  const plan = prediction.intervention_plan || {};
+  const actions = plan.actions || plan.suggestions || [];
+  if (actions.length > 0) {
+    list.innerHTML = '<div class="suggestion-list-heading">' + escapeWhatIfHtml(plan.focus_summary || '建议先做这三件事') + '</div>' + actions.map(function(desc, index) {
       return '<div class="suggestion-item">' +
-        '<div class="icon goal"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>' +
-        '<div class="content"><div class="desc">' + desc + '</div></div>' +
+        '<div class="icon goal" aria-hidden="true">' + (index + 1) + '</div>' +
+        '<div class="content"><div class="desc">' + escapeWhatIfHtml(desc) + '</div></div>' +
       '</div>';
-    }).join('');
+    }).join('') +
+      '<div class="suggestion-item"><div class="icon follow" aria-hidden="true">查</div><div class="content"><div class="desc"><strong>复查提示：</strong>' + escapeWhatIfHtml(plan.follow_up || '请根据自身情况定期复查。') + '</div></div></div>' +
+      '<div class="suggestion-item"><div class="icon warn" aria-hidden="true">急</div><div class="content"><div class="desc"><strong>紧急情况：</strong>' + escapeWhatIfHtml(plan.emergency_warning || '如出现急性不适，请立即就医。') + '</div></div></div>';
   }
 
   renderGauge(maxProb * 100, level.color);
@@ -1223,28 +1252,6 @@ document.getElementById('whatIfRun')?.addEventListener('click', async function()
   }
 });
 
-function renderShapChart(domId, items, colorStart, colorEnd) {
-  const dom = document.getElementById(domId);
-  if (domId === 'positiveShapChart' && positiveShap) positiveShap.dispose();
-  if (domId === 'negativeShapChart' && negativeShap) negativeShap.dispose();
-  const chart = echarts.init(dom);
-  if (!items || !items.length) {
-    chart.setOption({ title: { text: '暂无显著因素', left: 'center', top: 'center', textStyle: { color: '#94A3B8', fontSize: 13 } } });
-    if (domId === 'positiveShapChart') positiveShap = chart; else negativeShap = chart;
-    return;
-  }
-  const labels = items.map(function(item) { return FEATURE_LABELS[item.feature] || item.feature; });
-  const values = items.map(function(item) { return Number(item.impact_percent || 0); });
-  chart.setOption({
-    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, formatter: function(params) { var item = items[params[0].dataIndex]; return (FEATURE_LABELS[item.feature] || item.feature) + '<br/>影响强度：' + Number(item.impact_percent || 0).toFixed(2) + '%'; } },
-    grid: { top: 10, left: 8, right: 30, bottom: 6, containLabel: true },
-    xAxis: { type: 'value', axisLabel: { color: '#94A3B8', formatter: '{value}%' }, splitLine: { lineStyle: { color: 'rgba(0,0,0,0.04)' } }, axisLine: { show: false }, axisTick: { show: false } },
-    yAxis: { type: 'category', data: labels, axisLabel: { color: '#475569', fontWeight: 600 }, axisLine: { show: false }, axisTick: { show: false } },
-    series: [{ type: 'bar', data: values, barWidth: 16, showBackground: true, backgroundStyle: { color: 'rgba(0,0,0,0.03)', borderRadius: 999 }, itemStyle: { borderRadius: 999, color: { type: 'linear', x: 0, y: 0, x2: 1, y2: 0, colorStops: [{ offset: 0, color: colorStart }, { offset: 1, color: colorEnd }] } }, label: { show: true, position: 'right', color: '#475569', fontWeight: 700, formatter: '{c}%' } }]
-  });
-  if (domId === 'positiveShapChart') positiveShap = chart; else negativeShap = chart;
-}
-
 /* ===========================================================================
   *  模块E：ECharts 仪表盘
   * =========================================================================== */
@@ -1315,11 +1322,9 @@ function renderShapChart(domId, items, colorStart, colorEnd) {
    };
    gaugeInstance.setOption(option);
   if (!gaugeResizeBound) {
-    window.addEventListener('resize', function() {
-      if (gaugeInstance) gaugeInstance.resize();
-      if (positiveShap) positiveShap.resize();
-      if (negativeShap) negativeShap.resize();
-    });
+     window.addEventListener('resize', function() {
+       if (gaugeInstance) gaugeInstance.resize();
+     });
     gaugeResizeBound = true;
   }
 }
@@ -1330,6 +1335,8 @@ function renderShapChart(domId, items, colorStart, colorEnd) {
  function scrollToForm() {
    document.getElementById('assessmentForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
  }
+
+ loadAssessmentHistory();
  
  </script>
  <script src="{{ url_for('static', filename='js/phase2.js') }}" defer></script>

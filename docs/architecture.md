@@ -1,9 +1,18 @@
 # 架构
 
 ```text
-raw 原始与标准数据 -> features 特征产物 -> models 模型与清单
-                                      |                    |
-                                Spark 伪分布式作业       Flask B/C 端接口
+浏览器/机构 CSV -> Flask 分片接口 -> HDFS ODS/RAW
+                                      |
+                                  Spark ETL
+                                      |
+                               DWS 特征 + 双模型评分
+                                      |
+                               HDFS ADS 聚合结果
+                                      |
+                     Flask API / 机构看板 / 趋势与随访
+
+SQLite（默认）或 MySQL 保存任务、数据集、评估历史和模型/作业元数据；
+HDFS 保存大文件与分布式结果，Spark 负责批量计算。三者职责相互独立。
 ```
 
 - `data/raw/source_dataset/`：原始异构数据集。

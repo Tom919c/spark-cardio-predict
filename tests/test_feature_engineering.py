@@ -27,6 +27,12 @@ def test_build_training_dataframe_imputes_features_and_keeps_two_labels():
     assert result["label_stroke"].tolist() == [0, 1, 0, 1]
     assert set(result["sample_weight"]) == {1.0}
 
+    training_input = CardioFeatureEngineering(
+        FEATURES, "target_disease", 0.2, 42
+    ).build_training_dataframe(dataframe, impute=False)
+    assert training_input["bmi"].isna().sum() == 1
+    assert training_input["label_stroke"].tolist() == [0, 1, 0, 1]
+
 
 def test_legacy_target_disease_is_mapped_to_two_labels():
     dataframe = pd.DataFrame(

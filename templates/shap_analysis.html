@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CardioSpark AI 风险原因分析</title>
+  <meta name="description" content="CardioSpark 专业模型解释页，以相对影响强度展示模型内部依据。">
+  <title>CardioSpark 专业模型解释</title>
   <script src="{{ url_for('static', filename='tailwind/tailwind.js') }}"></script>
   <script src="{{ url_for('static', filename='echarts/echarts.min.js') }}"></script>
   <style>
@@ -319,9 +320,8 @@
       .hero-top { flex-direction: column; align-items: flex-start; }
     }
   </style>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/cardiospark-redesign.css') }}">
 </head>
-<body class="page-shap">
+<body>
   <div class="orb orb-a"></div>
   <div class="orb orb-b"></div>
 
@@ -335,50 +335,34 @@
     </div>
   </div>
 
-  <div class="shell">
+  <main class="shell" id="main-content">
     <section class="hero glass">
       <div class="hero-top">
         <div>
-          <div class="badge">AI 风险原因分析 / AI Risk Reasoning</div>
-          <h1>风险原因说明</h1>
+          <div class="badge">专业模型解释 / Model Explanation</div>
+          <h1>模型内部依据说明</h1>
           <p>
-            这一页会用更直白的方式告诉你，系统为什么给出当前的风险判断。
-            我们会把主要的风险推动因素和有帮助的保护因素分别展示出来，
-            帮助你理解结果背后的原因。
+            本页面向教师、评审和希望了解技术细节的用户，展示模型对本次输入的相对影响强度。
+            这些结果用于解释模型行为，不代表医学因果关系。
           </p>
         </div>
-        <a href="{{ url_for('pages.risk_report_page') }}" class="back-link">返回评估页</a>
+        <a href="{{ url_for('pages.result_report_page') }}" class="back-link">返回完整报告</a>
       </div>
     </section>
 
     <div id="shapContent" class="hidden">
-      <section class="assessment-context glass" style="animation-delay:0.06s;">
-        <div class="context-item">
-          <div class="meta">本次评估上下文</div>
-          <strong id="summaryCategory">--</strong>
-        </div>
-        <div class="context-item">
-          <div class="meta">心脏模型风险</div>
-          <strong id="summaryHeart">--</strong>
-        </div>
-        <div class="context-item">
-          <div class="meta">卒中模型风险</div>
-          <strong id="summaryStroke">--</strong>
-        </div>
-      </section>
-
       <section class="layout">
         <article class="factor-card glass" style="animation-delay:0.24s;">
-          <h2 class="title">哪些因素在推高风险</h2>
-          <p class="subtitle">柱子越长，说明该因素在这次评估里越值得重点关注。</p>
+          <h2 class="title">心脏模型：主要影响因素</h2>
+          <p class="subtitle">↑ 表示推动模型分值，↓ 表示降低模型分值；只在心脏模型内部比较。</p>
           <div class="chart-box">
             <div id="positiveFactorsChart" class="chart-canvas"></div>
           </div>
         </article>
 
         <article class="factor-card glass" style="animation-delay:0.3s;">
-          <h2 class="title">哪些因素在帮助降低风险</h2>
-          <p class="subtitle">这些因素对本次结果有一定保护或对冲作用，柱子越长代表帮助越明显。</p>
+          <h2 class="title">卒中模型：主要影响因素</h2>
+          <p class="subtitle">↑ 表示推动模型分值，↓ 表示降低模型分值；只在卒中模型内部比较。</p>
           <div class="chart-box">
             <div id="negativeFactorsChart" class="chart-canvas"></div>
           </div>
@@ -402,16 +386,16 @@
         <h2 class="title">如何理解这页内容</h2>
         <div class="detail-list">
           <div class="detail-item">
-            <strong>这不是医生诊断，而是风险原因提示</strong>
-            <span>这里展示的是系统根据你输入的信息总结出的主要影响因素，帮助你理解为什么这次结果会偏高或偏低。</span>
+            <strong>这不是医生诊断，也不是医学因果结论</strong>
+            <span>这里展示的是模型内部的相对影响方向，仅帮助理解模型为什么给出当前分值。</span>
           </div>
           <div class="detail-item">
             <strong>如何理解“影响强度”</strong>
-            <span>影响强度越高，说明该因素在这次评估中越值得关注。它表示相对影响程度，适合用于比较，不代表医学上的绝对概率。</span>
+            <span>影响强度只适合在同一次模型解释中比较，不代表对最终概率贡献了相同百分比，也不能跨模型直接比较。</span>
           </div>
           <div class="detail-item">
             <strong>这页最适合做什么</strong>
-            <span>你可以把它当作“风险来源说明页”：帮助用户明白风险来自哪里，也帮助展示系统具备更强的透明度和可解释性。</span>
+            <span>它适合用于检查模型是否关注了合理输入，以及向评审展示模型透明度；普通健康行动请以完整报告为准。</span>
           </div>
         </div>
       </section>
@@ -422,7 +406,7 @@
       系统才会把最新的分析结果同步到这里。
     </div>
     <div id="phase2ShapState" class="phase2-empty glass" style="margin-top:16px;display:none;"></div>
-  </div>
+  </main>
 
   <script>
     const categoryLabelMap = {
@@ -464,7 +448,8 @@
       }
 
       const labels = items.map(function(item) {
-        return item.feature_label || item.feature || "--";
+        const direction = item.direction === "decrease" ? "↓ " : "↑ ";
+        return direction + (item.feature_label || item.feature || "--");
       });
       const values = items.map(function(item) {
         return Number(item.impact_percent || 0);
@@ -556,33 +541,28 @@
       }
 
       const data = JSON.parse(raw);
-      const summary = data.combined_shap_summary || {};
+      const heartExplanation = data.heart_shap_explanation || {};
+      const strokeExplanation = data.stroke_shap_explanation || {};
       document.getElementById("emptyState").classList.add("hidden");
       document.getElementById("shapContent").classList.remove("hidden");
-
-      document.getElementById("summaryCategory").textContent = categoryLabelMap[data.final_category ?? 0] || "风险评估完成";
-      document.getElementById("summaryHeart").textContent = safePercent(data.heart_probability_percent);
-      document.getElementById("summaryStroke").textContent = safePercent(data.stroke_probability_percent);
 
       if (positiveChart) positiveChart.dispose();
       if (negativeChart) negativeChart.dispose();
       positiveChart = renderFactorChart(
         "positiveFactorsChart",
-        summary.top_positive_factors || [],
+        (heartExplanation.top_positive_factors || []).concat(heartExplanation.top_negative_factors || []),
         "#ffb0c0",
         "#ff7a92",
-        "当前没有明显推高风险的主要因素"
+        "心脏模型当前没有可用的因素解释"
       );
       negativeChart = renderFactorChart(
         "negativeFactorsChart",
-        summary.top_negative_factors || [],
+        (strokeExplanation.top_positive_factors || []).concat(strokeExplanation.top_negative_factors || []),
         "#9af0c3",
         "#58d99a",
-        "当前没有明显对冲风险的主要因素"
+        "卒中模型当前没有可用的因素解释"
       );
 
-      const heartExplanation = data.heart_shap_explanation || {};
-      const strokeExplanation = data.stroke_shap_explanation || {};
       document.getElementById("heartExplainStatus").textContent = heartExplanation.available ? "已完成解释分析" : "暂时无法生成解释";
       document.getElementById("heartExplainText").textContent = heartExplanation.available
         ? "系统已经完成心脏风险模型的原因拆解，可结合上方图表理解本次结果。"

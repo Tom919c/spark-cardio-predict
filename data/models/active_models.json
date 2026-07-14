@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "updated_at": "2026-07-14T04:04:25.589352+00:00",
+  "updated_at": "2026-07-14T13:24:35.374461+00:00",
   "feature_columns": [
     "age",
     "gender",
@@ -14,8 +14,21 @@
   ],
   "strategy": "two_xgboost_models_with_isotonic_calibration",
   "models": {
-    "heart": "xgboost_heart_xgboost_phase2_v2_20260714_120246.joblib",
-    "stroke": "xgboost_stroke_xgboost_phase2_v2_20260714_120254.joblib"
+    "heart": "active_heart.joblib",
+    "stroke": "active_stroke.joblib"
+  },
+  "artifact_sha256": {
+    "heart": "7b86660bd3e561d90ea73ce06061668c5906669ceb2dd1f8f3f2e79335a8cbe1",
+    "stroke": "877d866b7f74d04683214fba09c03be834aeae20b39e69f0a6aa645c8ded9d41"
+  },
+  "runtime": {
+    "python": "3.12.3",
+    "packages": {
+      "pandas": "2.2.2",
+      "scikit-learn": "1.5.1",
+      "joblib": "1.4.2",
+      "xgboost": "3.1.2"
+    }
   },
   "metrics": {
     "heart": {

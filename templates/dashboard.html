@@ -9,7 +9,6 @@
 <script src="{{ url_for('static', filename='echarts/echarts-wordcloud.min.js') }}" onerror="this.remove();"></script>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/page-switcher.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/phase2.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/cardiospark-redesign.css') }}">
 <style>
   /* ===== 全局基础样式 ===== */
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -385,7 +384,7 @@
 
 </style>
 </head>
-<body class="page-dashboard">
+<body>
 
 <!-- ============================================================ -->
 <!-- ==================== 顶部导航栏 ============================ -->
@@ -560,7 +559,14 @@
     <div class="phase2-card" id="phase2UploadPanel">
       <h3 class="phase2-title">机构上传 / 分片进度 / 任务轮询</h3>
       <div class="phase2-muted" style="margin-bottom:10px;">前端只负责上传、分片和轮询展示；业务结果仍由后端接口返回。</div>
-      <input id="phase2UploadFile" type="file" class="phase2-muted" style="display:block;margin-bottom:10px;width:100%;">
+      <div class="phase2-engine-grid" aria-label="当前数据平台引擎">
+        <div><span>元数据</span><strong id="phase2DatabaseEngine">检测中</strong></div>
+        <div><span>数据存储</span><strong id="phase2StorageEngine">检测中</strong></div>
+        <div><span>批量计算</span><strong id="phase2ComputeEngine">检测中</strong></div>
+      </div>
+      <label class="phase2-field-label" for="phase2DataPeriod">数据所属时期</label>
+      <input id="phase2DataPeriod" class="phase2-input" type="text" placeholder="例如 2026-07 或 2026-Q3" required>
+      <input id="phase2UploadFile" type="file" accept=".csv,text/csv" class="phase2-muted" style="display:block;margin-bottom:10px;width:100%;">
       <div class="phase2-inline-actions" style="margin-bottom:10px;">
         <button type="button" class="phase2-btn" id="phase2UploadStart">开始上传</button>
         <span class="phase2-pill">任务ID：<span id="phase2UploadTaskId">--</span></span>

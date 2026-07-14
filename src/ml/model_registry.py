@@ -3,6 +3,10 @@
 from __future__ import annotations
 
 import json
+import hashlib
+import importlib.metadata
+import shutil
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -47,14 +51,23 @@ class ModelRegistry:
         """写入模型清单，记录路径、指标和特征契约。"""
         self.model_dir.mkdir(parents=True, exist_ok=True)
         self.manifest_path.parent.mkdir(parents=True, exist_ok=True)
+        active_models = {}
+        artifact_hashes = {}
+        for name, source_path in models.items():
+            source = Path(source_path).resolve()
+            target = (self.model_dir / f"active_{name}.joblib").resolve()
+            if source != target:
+                shutil.copy2(source, target)
+            active_models[name] = self._store_artifact_path(str(target))
+            artifact_hashes[name] = self._sha256(target)
         manifest = {
             "version": 2,
             "updated_at": datetime.now(timezone.utc).isoformat(),
             "feature_columns": self.feature_columns,
             "strategy": "two_xgboost_models_with_isotonic_calibration",
-            "models": {
-                name: self._store_artifact_path(path) for name, path in models.items()
-            },
+            "models": active_models,
+            "artifact_sha256": artifact_hashes,
+            "runtime": self._runtime_versions(),
             "metrics": metrics,
         }
         self.manifest_path.write_text(
@@ -76,3 +89,25 @@ class ModelRegistry:
         if not artifact.is_absolute():
             artifact = self.manifest_path.parent / artifact
         return artifact.resolve()
+
+    @staticmethod
+    def _sha256(path: Path) -> str:
+        digest = hashlib.sha256()
+        with path.open("rb") as stream:
+            for block in iter(lambda: stream.read(1024 * 1024), b""):
+                digest.update(block)
+        return digest.hexdigest()
+
+    @staticmethod
+    def _runtime_versions() -> dict:
+        packages = ("pandas", "scikit-learn", "joblib", "xgboost")
+        versions = {}
+        for package in packages:
+            try:
+                versions[package] = importlib.metadata.version(package)
+            except importlib.metadata.PackageNotFoundError:
+                versions[package] = "not-installed"
+        return {
+            "python": sys.version.split()[0],
+            "packages": versions,
+        }

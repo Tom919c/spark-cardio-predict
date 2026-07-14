@@ -10,6 +10,7 @@ class InterventionService:
             return {
                 **plan,
                 "suggestions": [item["text"] for item in plan["suggestions"]],
+                "actions": [item["text"] for item in plan.get("actions", [])],
                 "sources": plan["suggestions"],
             }
         suggestions = []
