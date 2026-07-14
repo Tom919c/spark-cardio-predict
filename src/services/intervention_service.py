@@ -2,6 +2,14 @@ class InterventionService:
     """Builds practical suggestions from risk factors and a five-level assessment."""
 
     def build_plan(self, sample, risk_level):
+        if self.knowledge_service is not None:
+            plan = self.knowledge_service.build_plan(sample, risk_level)
+            return {
+                **plan,
+                "suggestions": [item["text"] for item in plan["suggestions"]],
+                "actions": [item["text"] for item in plan.get("actions", [])],
+                "sources": plan["suggestions"],
+            }
         suggestions = []
 
         if sample.get("hypertension", 0) == 1:

@@ -52,11 +52,13 @@ class BaseConfig:
 
     APP_NAME = "CardioSpark"
     SECRET_KEY = os.getenv("SECRET_KEY", "development-only-secret")
+    # 用 HMAC 对浏览器生成的匿名客户端标识做不可逆映射；生产环境应单独配置。
+    ASSESSMENT_HASH_KEY = os.getenv("ASSESSMENT_HASH_KEY", SECRET_KEY)
     JSON_AS_ASCII = False
 
     HOST = os.getenv("HOST", "127.0.0.1")
     PORT = _as_int("PORT", 5000)
-    DEBUG = _as_bool(os.getenv("DEBUG"), True)
+    DEBUG = _as_bool(os.getenv("DEBUG"), False)
     APP_ENV = os.getenv("APP_ENV", "development")
 
     # 默认本地模式，未启动 HDFS 时 Flask 仍可用于演示和接口测试。
@@ -83,7 +85,44 @@ class BaseConfig:
     DATASET_ENCODING = os.getenv("DATASET_ENCODING", "utf-8")
     DATASET_SEPARATOR = os.getenv("DATASET_SEPARATOR", ",")
 
-    # 仅在 WSL2/VMware Linux 且 DATA_MODE=hdfs 时读取以下伪分布式参数。
+    # 阶段二数据集、任务和本地开发配置。
+    DATABASE_TYPE = os.getenv("DATABASE_TYPE", "sqlite").strip().lower()
+    DATABASE_PATH = _project_path(
+        os.getenv("DATABASE_PATH", "data/localstorage/app.db")
+    )
+    MYSQL_HOST = os.getenv("MYSQL_HOST", "127.0.0.1")
+    MYSQL_PORT = _as_int("MYSQL_PORT", 3306)
+    MYSQL_USER = os.getenv("MYSQL_USER", "root")
+    MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "")
+    MYSQL_DATABASE = os.getenv("MYSQL_DATABASE", "cardiospark")
+    UPLOAD_ROOT = _project_path(
+        os.getenv("UPLOAD_ROOT", "data/localstorage/uploads")
+    )
+    LOCAL_RESULT_ROOT = _project_path(
+        os.getenv("LOCAL_RESULT_ROOT", "data/localstorage/results")
+    )
+    UPLOAD_MAX_FILE_SIZE = _as_int("UPLOAD_MAX_FILE_SIZE", 512 * 1024 * 1024)
+    UPLOAD_CHUNK_SIZE = _as_int("UPLOAD_CHUNK_SIZE", 8 * 1024 * 1024)
+    # Flask 单请求只承载一个分片；完整文件由分片任务合并，避免超大请求占满内存。
+    MAX_CONTENT_LENGTH = _as_int(
+        "MAX_CONTENT_LENGTH", UPLOAD_CHUNK_SIZE + 1024 * 1024
+    )
+    LOCAL_ANALYSIS_CHUNK_SIZE = _as_int("LOCAL_ANALYSIS_CHUNK_SIZE", 100_000)
+    TASK_WORKERS = _as_int("TASK_WORKERS", 2)
+    PRIVACY_MIN_GROUP_SIZE = _as_int("PRIVACY_MIN_GROUP_SIZE", 5)
+    KNOWLEDGE_BASE_PATH = _project_path(
+        os.getenv(
+            "KNOWLEDGE_BASE_PATH", "resources/knowledge/intervention_rules.json"
+        )
+    )
+    MAP_ASSET_DIR = _project_path(os.getenv("MAP_ASSET_DIR", "static/geo"))
+    SPARK_ANALYSIS_SCRIPT = _project_path(
+        os.getenv("SPARK_ANALYSIS_SCRIPT", "scripts/run_phase2_analysis.py")
+    )
+    # Spark 在当前应用所在环境中原生执行，VMware Ubuntu 提供 HDFS 存储。
+    SPARK_SCORE_ENGINE = os.getenv("SPARK_SCORE_ENGINE", "pandas").strip().lower()
+
+    # DATA_MODE=hdfs 时使用以下 HDFS 参数；地址由每位成员在 .env 中填写。
     HDFS_NAMENODE_URI = os.getenv("HDFS_NAMENODE_URI", "hdfs://localhost:9000")
     HDFS_WEB_URL = os.getenv("HDFS_WEB_URL", "http://localhost:9870")
     # 默认使用当前系统用户，团队成员可在 .env 中覆盖为 Hadoop 用户名。

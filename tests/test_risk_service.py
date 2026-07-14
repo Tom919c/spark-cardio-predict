@@ -47,6 +47,10 @@ def test_registry_and_risk_service_use_server_managed_models(tmp_path):
     manifest_text = registry_path.read_text(encoding="utf-8")
     assert "D:\\" not in manifest_text
     assert '"version": 2' in manifest_text
+    assert '"heart": "active_heart.joblib"' in manifest_text
+    assert '"artifact_sha256"' in manifest_text
+    assert (tmp_path / "active_heart.joblib").exists()
+    assert (tmp_path / "active_stroke.joblib").exists()
 
     config = {
         "CARDIO_FEATURE_COLUMNS": FEATURES,
@@ -69,3 +73,4 @@ def test_registry_and_risk_service_use_server_managed_models(tmp_path):
     assert "combined_shap_summary" in result
     assert "risk_level" in result
     assert result["risk_level"]["code"] in {1, 2, 3, 4, 5}
+    assert result["model_scope"]["type"] == "screening_proxy"

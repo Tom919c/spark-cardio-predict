@@ -67,6 +67,10 @@ class RiskService:
             for target, target_result in result["targets"].items()
         }
         result["registry"] = self.registry.register(model_paths, metrics)
+        for target_name, target_result in result["targets"].items():
+            target_result["model_path"] = str(
+                self.registry.model_dir / f"active_{target_name}.joblib"
+            )
         self.training_recorder.append_multi_round_result(result)
         return result
 
@@ -136,6 +140,14 @@ class RiskService:
             key_highlights=interpretation["key_highlights"],
         )
         result = risk_result.to_dict()
+        result["intervention_plan"].update(
+            {
+                "focus_summary": intervention_data.get("focus_summary"),
+                "actions": intervention_data.get("actions", []),
+                "follow_up": intervention_data.get("follow_up"),
+                "emergency_warning": intervention_data.get("emergency_warning"),
+            }
+        )
         result["required_fields"] = self.feature_columns
         result["heart_predicted_label"] = prediction["heart_predicted_label"]
         result["stroke_predicted_label"] = prediction["stroke_predicted_label"]
@@ -151,6 +163,17 @@ class RiskService:
             heart_explanation=heart_explanation,
             stroke_explanation=stroke_explanation,
         )
+        result["intervention_knowledge_version"] = intervention_data.get(
+            "knowledge_version", "fallback"
+        )
+        result["intervention_sources"] = intervention_data.get("sources", [])
+        result["model_scope"] = {
+            "type": "screening_proxy",
+            "label": "心脑血管风险筛查模型",
+            "disclaimer": "结果用于课程项目中的健康风险提示，不代表临床诊断或真实年度发病概率。",
+            "probability_features": list(self.feature_columns),
+            "auxiliary_indicators_affect_probability": False,
+        }
         return result
 
     def _build_final_category(self, heart_probability, stroke_probability):
@@ -253,4 +276,9 @@ class RiskService:
         ):
             normalised[field] = int(float(normalised[field]))
         normalised["bmi"] = round(float(normalised["bmi"]), 2)
+        for field in ("systolic_bp", "diastolic_bp", "fasting_glucose"):
+            if field in normalised and normalised[field] not in (None, ""):
+                normalised[field] = round(float(normalised[field]), 2)
+        if "family_history" in normalised and normalised["family_history"] not in (None, ""):
+            normalised["family_history"] = int(float(normalised["family_history"]))
         return normalised

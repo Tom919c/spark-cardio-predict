@@ -10,6 +10,7 @@
 <script src="https://cdn.jsdelivr.net/npm/echarts-wordcloud@2.1.0/dist/echarts-wordcloud.min.js">
 </script>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/page-switcher.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/phase2.css') }}">
 <style>
   /* ===== 全局基础样式 ===== */
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -549,6 +550,44 @@
 
     </div>
 
+  </section>
+
+  <section class="phase2-grid phase2-grid--3" style="margin-top:16px;">
+    <div class="phase2-card" id="phase2UploadPanel">
+      <h3 class="phase2-title">机构上传 / 分片进度 / 任务轮询</h3>
+      <div class="phase2-muted" style="margin-bottom:10px;">前端只负责上传、分片和轮询展示；业务结果仍由后端接口返回。</div>
+      <div class="phase2-engine-grid" aria-label="当前数据平台引擎">
+        <div><span>元数据</span><strong id="phase2DatabaseEngine">检测中</strong></div>
+        <div><span>数据存储</span><strong id="phase2StorageEngine">检测中</strong></div>
+        <div><span>批量计算</span><strong id="phase2ComputeEngine">检测中</strong></div>
+      </div>
+      <label class="phase2-field-label" for="phase2DataPeriod">数据所属时期</label>
+      <input id="phase2DataPeriod" class="phase2-input" type="text" placeholder="例如 2026-07 或 2026-Q3" required>
+      <input id="phase2UploadFile" type="file" accept=".csv,text/csv" class="phase2-muted" style="display:block;margin-bottom:10px;width:100%;">
+      <div class="phase2-inline-actions" style="margin-bottom:10px;">
+        <button type="button" class="phase2-btn" id="phase2UploadStart">开始上传</button>
+        <span class="phase2-pill">任务ID：<span id="phase2UploadTaskId">--</span></span>
+      </div>
+      <div class="phase2-progress" aria-label="上传进度"><span id="phase2UploadProgress"></span></div>
+      <div class="phase2-progress" style="margin-top:8px;" aria-label="分片进度"><span id="phase2UploadChunkProgress"></span></div>
+      <div class="phase2-muted" id="phase2UploadChunk" style="margin-top:8px;">分片上传状态会在这里显示。</div>
+      <div class="phase2-empty" id="phase2UploadStatus" style="margin-top:10px;">请选择文件后开始上传。</div>
+      <div class="phase2-upload-result" id="phase2UploadResult" style="margin-top:10px;">
+        <div class="phase2-muted">分析完成后将在这里显示本次数据集的汇总结果。</div>
+      </div>
+    </div>
+
+    <div class="phase2-card">
+      <h3 class="phase2-title">区域分析与展示模式</h3>
+      <div class="phase2-muted" id="phase2MapMode">加载中...</div>
+      <div id="phase2RegionTable" style="margin-top:10px;"></div>
+    </div>
+
+    <div class="phase2-card">
+      <h3 class="phase2-title">快照趋势</h3>
+      <div class="phase2-muted" style="margin-bottom:10px;">用于查看最近一次评估与后续快照的变化，不会伪造未返回的数据。</div>
+      <div id="snapshotTrendChart" class="chart-container" style="height:240px;"></div>
+    </div>
   </section>
 </main>
 

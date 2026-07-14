@@ -112,7 +112,8 @@ class DataService:
             test_size=self.test_size,
             random_state=self.random_state,
         )
-        return engineer.build_training_dataframe(dataframe)
+        # 保留缺失值到训练器；插补器只能在训练子集上拟合，避免数据泄漏。
+        return engineer.build_training_dataframe(dataframe, impute=False)
 
     def _load_distributed_feature_dataframe(self):
         """HDFS 模式下从 Spark 特征输出目录读取训练数据。"""

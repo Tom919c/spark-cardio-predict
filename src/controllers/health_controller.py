@@ -1,5 +1,6 @@
-from flask import Blueprint
+from flask import Blueprint, current_app
 
+from src.services.platform_capability_service import PlatformCapabilityService
 from src.utils.response import success_response
 
 health_bp = Blueprint("health", __name__)
@@ -19,3 +20,11 @@ def index():
 @health_bp.route("/health")
 def health_check():
     return success_response(message="服务运行正常。")
+
+
+@health_bp.route("/api/capabilities")
+def capabilities():
+    return success_response(
+        message="平台运行能力获取成功。",
+        data=PlatformCapabilityService(current_app.config).inspect(),
+    )

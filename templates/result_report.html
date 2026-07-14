@@ -3,9 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CardioSpark AI 预测结果</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <meta name="description" content="CardioSpark 完整风险筛查报告，包含风险摘要、健康行动与复查提示。">
+  <title>CardioSpark 风险筛查报告</title>
+  <script src="{{ url_for('static', filename='tailwind/tailwind.js') }}"></script>
+  <script src="{{ url_for('static', filename='echarts/echarts.min.js') }}"></script>
   <style>
     @import url("{{ url_for('static', filename='css/page-switcher.css') }}");
     :root {
@@ -302,23 +303,27 @@
     </div>
   </div>
 
-  <div class="shell">
+  <main class="shell" id="main-content">
     <section class="hero glass">
       <div class="hero-top">
         <div>
-          <div class="badge">预测结果展示 / Result Report</div>
-          <h1>AI 预测结果</h1>
+          <div class="badge">完整风险报告 / Result Report</div>
+          <h1>风险筛查报告</h1>
           <p>
-            这里是独立的结果展示页。你可以在这里查看综合判断、风险摘要、双风险概率、
-            重点提示与健康建议，也可以继续进入风险原因分析页，了解模型为什么给出当前结果。
+            查看本次筛查的综合判断、双模型风险分值、重点提示和可执行的健康行动。
+            如需了解模型内部依据，可继续进入专业模型解释页。
           </p>
         </div>
         <div class="nav-links">
           <a href="{{ url_for('pages.risk_report_page') }}" class="nav-link">返回评估页</a>
-          <a href="{{ url_for('pages.shap_analysis_page') }}" class="explain-link">查看风险原因分析</a>
+          <a href="{{ url_for('pages.shap_analysis_page') }}" class="explain-link">专业模型解释</a>
         </div>
       </div>
     </section>
+
+    <div class="empty" role="note" style="margin:14px 0;color:#334155;background:rgba(239,246,255,.92);border-color:rgba(91,140,255,.22);">
+      本报告来自教学用风险筛查模型，风险分值仅用于健康提示，不等同于真实发病概率，也不构成诊断或治疗建议。
+    </div>
 
     <section class="panel panel-dark">
       <h2 class="title">结果总览</h2>
@@ -347,11 +352,11 @@
 
         <div class="grid" style="margin-top:14px;">
           <div class="card">
-            <div class="meta">心脏风险 / Heart Risk</div>
+            <div class="meta">心脏模型风险分值 / Heart Score</div>
             <span class="main" id="heartProbText">--</span>
           </div>
           <div class="card">
-            <div class="meta">卒中风险 / Stroke Risk</div>
+            <div class="meta">卒中模型风险分值 / Stroke Score</div>
             <span class="main" id="strokeProbText">--</span>
           </div>
         </div>
@@ -362,13 +367,13 @@
             <div id="highlightsList" class="list-wrap"></div>
           </div>
           <div class="list-card">
-            <div class="meta">健康建议 / Health Suggestions</div>
+            <div class="meta" id="suggestionHeading">先做这三件事 / Action Plan</div>
             <div id="suggestionsList" class="list-wrap"></div>
           </div>
         </div>
       </div>
     </section>
-  </div>
+  </main>
 
   <script>
     const categoryLabelMap = {
@@ -394,9 +399,18 @@
       return Number(value).toFixed(2) + "%";
     }
 
+    function escapeHtml(value) {
+      return String(value == null ? "" : value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
     function listHtml(items) {
       return (items || []).map(function(item, index) {
-        return '<div class="list-item" style="animation-delay:' + (index * 0.05) + 's;">' + item + "</div>";
+        return '<div class="list-item" style="animation-delay:' + (index * 0.05) + 's;">' + escapeHtml(item) + "</div>";
       }).join("");
     }
 
@@ -490,7 +504,15 @@
         : safePercent(data.stroke_predicted_probability);
 
       document.getElementById("highlightsList").innerHTML = listHtml(data.key_highlights || ["暂无额外提醒"]);
-      document.getElementById("suggestionsList").innerHTML = listHtml((data.intervention_plan || {}).suggestions || ["暂无建议"]);
+      const plan = data.intervention_plan || {};
+      document.getElementById("suggestionHeading").textContent = plan.focus_summary || "先做这三件事 / Action Plan";
+      const actionItems = plan.actions || plan.suggestions || ["暂无建议"];
+      const planItems = actionItems.map(function(item, index) {
+        return (index + 1) + "、" + item;
+      });
+      if (plan.follow_up) planItems.push("复查提示：" + plan.follow_up);
+      if (plan.emergency_warning) planItems.push("紧急情况：" + plan.emergency_warning);
+      document.getElementById("suggestionsList").innerHTML = listHtml(planItems);
 
       renderGauge(data.heart_probability_percent, data.stroke_probability_percent);
     }

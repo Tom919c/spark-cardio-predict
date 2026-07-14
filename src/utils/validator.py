@@ -33,6 +33,12 @@ class PredictionInputValidator:
         "alcohol": (0, 1),
         "exercise": (0, 1),
     }
+    OPTIONAL_NUMERIC_RANGES = {
+        "systolic_bp": (60, 260),
+        "diastolic_bp": (30, 180),
+        "fasting_glucose": (1, 40),
+        "family_history": (0, 1),
+    }
 
     def __init__(self, required_fields):
         self.required_fields = required_fields
@@ -58,6 +64,19 @@ class PredictionInputValidator:
                 invalid_fields[field] = f"取值范围为 {limits[0]}~{limits[1]}"
                 continue
             if field != "bmi" and value != int(value):
+                invalid_fields[field] = "必须是整数编码"
+        for field, limits in self.OPTIONAL_NUMERIC_RANGES.items():
+            if field not in payload or payload[field] in (None, ""):
+                continue
+            try:
+                value = float(payload[field])
+            except (TypeError, ValueError):
+                invalid_fields[field] = "必须是数字"
+                continue
+            if not math.isfinite(value) or not limits[0] <= value <= limits[1]:
+                invalid_fields[field] = f"取值范围为 {limits[0]}~{limits[1]}"
+                continue
+            if field == "family_history" and value != int(value):
                 invalid_fields[field] = "必须是整数编码"
         return {
             "valid": len(missing_fields) == 0 and not invalid_fields,

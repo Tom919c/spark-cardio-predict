@@ -11,12 +11,19 @@
 | GET | `/api/data/preprocess` | 特征工程校验结果 |
 | GET | `/api/risk/summary` | 双模型状态 |
 | GET | `/api/risk/train-estimate` | 训练耗时估算，不写入模型 |
-| GET | `/api/risk/train?run_label=phase1` | 训练并注册两个模型 |
+| POST | `/api/risk/train` | 训练并注册两个模型，JSON 可传 `run_label`、`rounds` |
 | POST | `/api/risk/predict` | 个人双风险评估 |
+| GET | `/api/assessments` | 按 `X-Client-ID` 获取匿名个人评估历史 |
+| GET | `/api/assessments/<assessment_id>` | 获取当前匿名客户端的一次评估摘要 |
+| GET | `/api/capabilities` | 查看 SQLite/MySQL、HDFS、Spark 与模型就绪状态 |
 | GET | `/api/analysis/dashboard` | B 端群体指标 |
 | GET | `/api/analysis/follow-ups?limit=100` | 重点随访名单 |
 
 `POST /api/risk/predict` 请求字段：`age`、`gender`、`bmi`、`cholesterol`、`diabetes`、`hypertension`、`smoker`、`alcohol`、`exercise`。浏览器不传模型路径。
+
+页面可同时提交 `systolic_bp`、`diastolic_bp`、`fasting_glucose` 和
+`family_history` 作为辅助健康提示字段；这些字段不进入当前九特征概率模型。
+预测接口返回的是课程项目中的筛查代理风险，不是临床诊断或真实年度发病概率。
 
 模型尚未注册时，预测接口返回 HTTP 400 和明确的模型未就绪消息；浏览器不应自行生成预测结果。
 

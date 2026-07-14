@@ -18,6 +18,17 @@ def build_risk_interpretation(
         highlights.append("缺乏规律运动，不利于心脑血管健康管理")
     if sample.get("bmi", 0) >= 24:
         highlights.append("BMI 偏高，提示超重或肥胖相关风险")
+    systolic = sample.get("systolic_bp")
+    diastolic = sample.get("diastolic_bp")
+    if systolic is not None and diastolic is not None and (
+        float(systolic) >= 140 or float(diastolic) >= 90
+    ):
+        highlights.append("本次填写的血压数值偏高，建议复测并咨询专业人员；该数值未直接进入概率模型")
+    glucose = sample.get("fasting_glucose")
+    if glucose is not None and float(glucose) >= 7.0:
+        highlights.append("本次填写的空腹血糖数值偏高，建议规范复查；该数值未直接进入概率模型")
+    if sample.get("family_history", 0) == 1:
+        highlights.append("存在心脑血管疾病家族史，建议在专业评估时主动告知医生")
 
     if not highlights:
         highlights.append("当前主要指标整体相对平稳，未见明显高危特征")
@@ -111,6 +122,32 @@ def build_indicator_insights(sample):
                 "value": smoker,
                 "status": status_map.get(smoker, "未知"),
                 "comment": "吸烟与心脏负面事件和脑卒中风险均相关。",
+            }
+        )
+
+    systolic = sample.get("systolic_bp")
+    diastolic = sample.get("diastolic_bp")
+    if systolic is not None and diastolic is not None:
+        elevated = float(systolic) >= 140 or float(diastolic) >= 90
+        insights.append(
+            {
+                "indicator": "本次血压",
+                "value": f"{systolic}/{diastolic} mmHg",
+                "status": "建议复测" if elevated else "参考范围内",
+                "comment": "该数值用于辅助健康提示，不直接进入当前九特征概率模型。",
+                "auxiliary": True,
+            }
+        )
+
+    glucose = sample.get("fasting_glucose")
+    if glucose is not None:
+        insights.append(
+            {
+                "indicator": "空腹血糖",
+                "value": f"{glucose} mmol/L",
+                "status": "建议规范复查" if float(glucose) >= 7.0 else "参考范围内",
+                "comment": "单次测量不能用于诊断；该数值不直接进入当前概率模型。",
+                "auxiliary": True,
             }
         )
 
