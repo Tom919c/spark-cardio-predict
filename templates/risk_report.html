@@ -8,8 +8,8 @@
  <!-- ===== CDN 引入 ===== -->
 <script src="{{ url_for('static', filename='tailwind/tailwind.js') }}"></script>
 <script src="{{ url_for('static', filename='echarts/echarts.min.js') }}"></script>
-<link rel="stylesheet" href="{{ url_for('static', filename='css/page-switcher.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/phase2.css') }}">
+ <link rel="stylesheet" href="{{ url_for('static', filename='css/page-switcher.css') }}">
+ <link rel="stylesheet" href="{{ url_for('static', filename='css/phase2.css') }}">
  
  <style>
  /* ===== 全局基础 ===== */
@@ -472,12 +472,13 @@
  @media(max-width:420px){.what-if-switch-list{grid-template-columns:1fr}.what-if-choice span{font-size:12px;padding-left:7px;padding-right:7px}}
 
  </style>
+ <link rel="stylesheet" href="{{ url_for('static', filename='css/cardiospark-redesign.css') }}">
  
  <!-- Tailwind 自定义 -->
  <script>tailwind.config={theme:{extend:{colors:{primary:{50:'#EFF6FF',100:'#DBEAFE',500:'#3B82F6',600:'#2563EB',700:'#1D4ED8',800:'#1E40AF'}}}}}</script>
  </head>
  
-  <body>
+ <body class="page-risk">
 
   <div class="page-wrap">
 
